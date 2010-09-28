@@ -34,7 +34,7 @@
 <option id="de.innot.avreclipse.compiler.option.optimize.1973532112" name="Optimization Level" superClass="de.innot.avreclipse.compiler.option.optimize" value="de.innot.avreclipse.compiler.optimize.size" valueType="enumerated"/>
 <option id="de.innot.avreclipse.compiler.option.incpath.230287034" name="Include Paths (-I)" superClass="de.innot.avreclipse.compiler.option.incpath" valueType="includePath">
 <listOptionValue builtIn="false" value="&quot;${workspace_loc:/lcdiface}&quot;"/>
-<listOptionValue builtIn="false" value="&quot;${workspace_loc:/delay}&quot;"/>
+<listOptionValue builtIn="false" value="&quot;${workspace_loc:/usart}&quot;"/>
 </option>
 <inputType id="de.innot.avreclipse.compiler.winavr.input.1723022455" name="C Source Files" superClass="de.innot.avreclipse.compiler.winavr.input"/>
 </tool>
@@ -45,11 +45,11 @@
 <tool id="de.innot.avreclipse.tool.linker.winavr.app.release.1936213996" name="AVR C Linker" superClass="de.innot.avreclipse.tool.linker.winavr.app.release">
 <option id="de.innot.avreclipse.linker.option.libpath.1525077554" name="Libraries Path (-L)" superClass="de.innot.avreclipse.linker.option.libpath" valueType="stringList">
 <listOptionValue builtIn="false" value="&quot;${workspace_loc:/lcdiface/Release}&quot;"/>
-<listOptionValue builtIn="false" value="&quot;${workspace_loc:/delay/Release}&quot;"/>
+<listOptionValue builtIn="false" value="&quot;${workspace_loc:/usart/Release}&quot;"/>
 </option>
 <option id="de.innot.avreclipse.linker.option.libs.756697906" name="Libraries (-l)" superClass="de.innot.avreclipse.linker.option.libs" valueType="libs">
 <listOptionValue builtIn="false" value="lcdiface"/>
-<listOptionValue builtIn="false" value="delay"/>
+<listOptionValue builtIn="false" value="usart"/>
 </option>
 </tool>
 <tool id="de.innot.avreclipse.tool.cpplinker.app.release.738282702" name="AVR C++ Linker" superClass="de.innot.avreclipse.tool.cpplinker.app.release"/>

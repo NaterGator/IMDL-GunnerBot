@@ -7,12 +7,11 @@
 
 #ifndef USART_H_
 #define USART_H_
-
 #include <avr/io.h>
 
 struct USARTconfig {
-	USART_t 	USARTmap;
-	PORT_t		PORTmap;
+	USART_t* 	USARTmap;
+	PORT_t*		PORTmap;
 	struct USARTconfig* this;
 };
 

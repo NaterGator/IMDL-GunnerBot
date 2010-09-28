@@ -28,9 +28,7 @@
 <tool id="de.innot.avreclipse.tool.compiler.winavr.lib.release.1865275842" name="AVR Compiler" superClass="de.innot.avreclipse.tool.compiler.winavr.lib.release">
 <option id="de.innot.avreclipse.compiler.option.debug.level.1892706138" name="Generate Debugging Info" superClass="de.innot.avreclipse.compiler.option.debug.level" value="de.innot.avreclipse.compiler.option.debug.level.none" valueType="enumerated"/>
 <option id="de.innot.avreclipse.compiler.option.optimize.1505287616" name="Optimization Level" superClass="de.innot.avreclipse.compiler.option.optimize" value="de.innot.avreclipse.compiler.optimize.size" valueType="enumerated"/>
-<option id="de.innot.avreclipse.compiler.option.incpath.109933901" superClass="de.innot.avreclipse.compiler.option.incpath" valueType="includePath">
-<listOptionValue builtIn="false" value="&quot;${workspace_loc:/delay}&quot;"/>
-</option>
+<option id="de.innot.avreclipse.compiler.option.incpath.109933901" name="Include Paths (-I)" superClass="de.innot.avreclipse.compiler.option.incpath" valueType="includePath"/>
 <inputType id="de.innot.avreclipse.compiler.winavr.input.1569713329" name="C Source Files" superClass="de.innot.avreclipse.compiler.winavr.input"/>
 </tool>
 <tool id="de.innot.avreclipse.tool.cppcompiler.lib.release.1498797241" name="AVR C++ Compiler" superClass="de.innot.avreclipse.tool.cppcompiler.lib.release">

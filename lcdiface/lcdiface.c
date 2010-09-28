@@ -7,7 +7,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <delay.h>
+#include <util/delay_x.h>
 #include "lcdiface.h"
 
 void backspace( struct LCDinfo *pLCD );
@@ -17,6 +17,7 @@ void LCDBusWrite( volatile int * pBus, unsigned int iData);
 void resendBuffToLCD( struct LCDinfo *pLCD );
 void sendCharToLCD( struct LCDinfo *pLCD, char iChar );
 void sendCommandToLCD(struct LCDinfo *pLCD, unsigned int nextCmd[] );
+void sendIntToLCD( struct LCDinfo *pLCD, int iInput );
 void setLCDCursor( struct LCDinfo *pLCD, unsigned int iLoc );
 void sendStringToLCD( struct LCDinfo *pLCD, char *pszInput );
 
@@ -57,7 +58,7 @@ void clearLCD( struct LCDinfo *pLCD ) {
 	pLCD->cursorPos = 0;
 	//Clear Screen
 	sendCommandToLCD( pLCD, data ); //Clear Screen
-	delay_ms(2);
+	_delay_ms(2);
 }
 
 void initLCD( struct LCDinfo *pLCD, int clear ) {
@@ -66,15 +67,15 @@ void initLCD( struct LCDinfo *pLCD, int clear ) {
 
 	if(pLCD->started == 0) {
 		pLCD->started = 1;
-		delay_ms(15);
+		_delay_ms(15);
 		LCDBusWrite( pLCD->pLCDDataBus, 0x30);
-		delay_ms(5);
+		_delay_ms(5);
 		LCDBusWrite( pLCD->pLCDDataBus, 0x30);
-		delay_ms(1);
+		_delay_ms(1);
 		LCDBusWrite( pLCD->pLCDDataBus, 0x30);
-		delay_ms(5);
+		_delay_ms(5);
 		LCDBusWrite( pLCD->pLCDDataBus, 0x20 | pLCD->config.interface8bit << 4);
-		delay_ms(1);
+		_delay_ms(1);
 		//do startup
 	}
 	data[4] = pLCD->config.interface8bit;
@@ -85,7 +86,7 @@ void initLCD( struct LCDinfo *pLCD, int clear ) {
 	data[3] = pLCD->config.twoLines;
 	data[2] = pLCD->config.tallFont;
 	sendCommandToLCD( pLCD, data );
-	delay_us(40);
+	_delay_us(40);
 	if( pLCD->pszLine1 == NULL ) {
 		pLCD->pszLine1 = malloc( sizeof( char ) * ( pLCD->config.lineLength + 1 ) );
 		memset( pLCD->pszLine1, ' ', ( pLCD->config.lineLength ) );
@@ -107,7 +108,7 @@ void initLCD( struct LCDinfo *pLCD, int clear ) {
 	data[1] = 0;
 	data[0] = 0;
 	sendCommandToLCD( pLCD, data ); //Display, Cursor, Blink Off
-	delay_us(40);
+	_delay_us(40);
 	if(clear)
 		clearLCD( pLCD );
 	else
@@ -125,23 +126,23 @@ void initLCD( struct LCDinfo *pLCD, int clear ) {
 	data[1] = pLCD->config.cursorInc;
 	data[0] = pLCD->config.displayShift;
 	sendCommandToLCD( pLCD, data );
-	delay_us(40);
+	_delay_us(40);
 	//Set display, cursor, blink
 	data[3] = 1;
 	data[2] = pLCD->config.displayEnable;
 	data[1] = pLCD->config.cursorEnable;
 	data[0] = pLCD->config.cursorBlink;
 	sendCommandToLCD( pLCD, data );
-	delay_us(40);
+	_delay_us(40);
 }
 
 void LCDBusWrite( volatile int * pBus, unsigned int iData) {
 	*pBus = iData & 0xF3;
-	delay_us(100);
+	_delay_us(50);
 	*pBus = iData | 0x08;
-	delay_us(100);
+	_delay_us(50);
 	*pBus = iData & 0xF3;
-	delay_us(500);
+	_delay_us(100);
 }
 
 void resendBuffToLCD( struct LCDinfo *pLCD ) {
@@ -151,7 +152,7 @@ void resendBuffToLCD( struct LCDinfo *pLCD ) {
 
 	cursorPos = pLCD->cursorPos;
 	sendCommandToLCD( pLCD, clrCmd );
-	delay_ms(2);
+	_delay_ms(2);
 	setLCDCursor( pLCD, 0 );
 
 	for(; i < pLCD->config.lineLength; i++)
@@ -199,7 +200,24 @@ void sendCommandToLCD(struct LCDinfo *pLCD, unsigned int nextCmd[] )  {
 					);
 	} else
 		return; //Listen, we don't really do 8 bit. Maybe later.
-	//delay_ms(2);
+	//_delay_ms(2);
+}
+
+void sendIntToLCD( struct LCDinfo *pLCD, int iInput ){
+	char digits[6]={'\0','\0','\0','\0','\0','\0'};
+	char *pDigits = &digits[4];
+	if( iInput < 0 ) {
+		sendCharToLCD(pLCD, '-');
+		iInput *= -1;
+	}
+	while(1) {
+		*pDigits = (iInput % 10) + 0x30;
+		iInput /= 10;
+		if(iInput == 0) break;
+		pDigits--;
+	}
+	while(*pDigits != '\0')
+		sendCharToLCD( pLCD, *(pDigits++) );
 }
 
 void setLCDCursor( struct LCDinfo *pLCD, unsigned int iLoc ) {
@@ -223,7 +241,7 @@ void setLCDCursor( struct LCDinfo *pLCD, unsigned int iLoc ) {
 	data[1] = (iMemPos & 0x2) >> 1;
 	data[0] = iMemPos & 0x1;
 	sendCommandToLCD( pLCD, data );
-	delay_us(40);
+	_delay_us(40);
 }
 
 void sendStringToLCD( struct LCDinfo *pLCD, char *pszInput ) {
