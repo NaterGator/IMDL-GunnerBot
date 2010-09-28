@@ -6,8 +6,8 @@
  */
 
 #include <avr/io.h>
-#include <lcdiface.h>
 #include <delay.h>
+#include <lcdiface.h>
 
 int main(void) {
 	struct LCDinfo avrLCD = {0};
@@ -32,7 +32,7 @@ int main(void) {
 
 	//Apply the configuration profile
 	avrLCD.config = twoLines;
-	avrLCD.pLCDDataBus = &PORTK_OUT;
+	avrLCD.pLCDDataBus = (volatile int *) &PORTK_OUT;
 	delayInit();
 
 	PORTK.DIRSET = 0xFF;

@@ -7,7 +7,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include "delay.h"
+#include <delay.h>
 #include "lcdiface.h"
 
 void backspace( struct LCDinfo *pLCD );
