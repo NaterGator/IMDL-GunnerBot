@@ -38,6 +38,7 @@ struct LCDinfo {
 	struct LCDconfig config;
 };
 
+extern void backspace( struct LCDinfo *pLCD );
 extern void clearLCD( struct LCDinfo *pLCD );
 extern void initLCD( struct LCDinfo *pLCD, int clear );
 extern void LCDBusWrite( volatile int * pBus, unsigned int iData);

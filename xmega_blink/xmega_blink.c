@@ -42,6 +42,7 @@ int main(void) {
 	while(1){
 		delay_ms(1000);
 		sendStringToLCD(avrLCD.this, "This is some content. It will line wrap.");
+
 		if(dir == 1) PORTQ.OUTSET = 1;
 		else	PORTQ.OUTCLR = 1;
 		dir = !dir;

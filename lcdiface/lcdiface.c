@@ -36,9 +36,9 @@ void backspace( struct LCDinfo *pLCD ) {
 	strcat( pszBuf2, (pszBuf1+pLCD->cursorPos) );
 	strcat( pszBuf2, " ");
 
-	strncpy( pLCD->pszLine1, pszBuf2, 20 );
-	pLCD->pszLine1[20]='\0';
-	if( pLCD->pszLine2 != NULL ) strcpy( pLCD->pszLine2, (pszBuf2+20));
+	strncpy( pLCD->pszLine1, pszBuf2, pLCD->config.lineLength );
+	pLCD->pszLine1[pLCD->config.lineLength]='\0';
+	if( pLCD->pszLine2 != NULL ) strcpy( pLCD->pszLine2, (pszBuf2+pLCD->config.lineLength));
 	pLCD->cursorPos--;
 	free( pszBuf1 );
 	free( pszBuf2 );
