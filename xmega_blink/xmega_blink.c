@@ -6,6 +6,7 @@
  */
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <delay.h>
 #include <lcdiface.h>
 
@@ -38,6 +39,9 @@ int main(void) {
 	PORTK.DIRSET = 0xFF;
 	PORTQ.DIRSET = 1;
 	initLCD( avrLCD.this, 1 );
+
+
+
 
 	while(1){
 		delay_ms(1000);
