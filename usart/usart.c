@@ -9,7 +9,7 @@ void initUsart( struct USARTconfig *conf) {
 	conf->PORTmap->DIR |= PIN7_bm;	//set the pin to output
 	conf->PORTmap->OUT |= PIN7_bm;	//set the pin high
 	conf->USARTmap->BAUDCTRLA = 34;
-	conf->USARTmap->BAUDCTRLB=0;
+	conf->USARTmap->BAUDCTRLB = 0;
 	/*
 	 *
 	 *  Baud rate 115,200
