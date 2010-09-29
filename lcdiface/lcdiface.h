@@ -41,10 +41,10 @@ struct LCDinfo {
 extern void backspace( struct LCDinfo *pLCD );
 extern void clearLCD( struct LCDinfo *pLCD );
 extern void initLCD( struct LCDinfo *pLCD, int clear );
-extern void LCDBusWrite( volatile int * pBus, unsigned int iData);
-extern void resendBuffToLCD( struct LCDinfo *pLCD );
+void LCDBusWrite( volatile int * pBus, unsigned int iData);
+void resendBuffToLCD( struct LCDinfo *pLCD );
 extern void sendCharToLCD( struct LCDinfo *pLCD, char iChar );
-extern void sendCommandToLCD(struct LCDinfo *pLCD, unsigned int nextCmd[] );
+void sendCommandToLCD(struct LCDinfo *pLCD, unsigned int nextCmd[] );
 extern void sendIntToLCD( struct LCDinfo *pLCD, int iInput );
 extern void setLCDCursor( struct LCDinfo *pLCD, unsigned int iLoc );
 extern void sendStringToLCD( struct LCDinfo *pLCD, char *pszInput );

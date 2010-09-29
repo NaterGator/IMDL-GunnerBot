@@ -20,34 +20,43 @@ int serialstreamAddCallbackPair( struct serialstream_struct *ss, struct ss_callb
 
 }
 
-void serialStreamProcessChar( struct serialstream_struct *ss ){
+int serialStreamProcessChar( struct serialstream_struct *ss ){
 	if(ss->pszDataBuff == NULL )
 			ss->pszDataBuff = calloc(2, sizeof(char));
 		else
-			ss->pszDataBuff = realloc(ss->pszDataBuff, sizeof(char) * (strlen(ss->pszDataBuff)+1) );
+			ss->pszDataBuff = realloc(ss->pszDataBuff, sizeof(char *) * (strlen(ss->pszDataBuff)+1) );
 	if(ss->pszDataBuff == NULL)
-		exit(0);
+		return -2;
 
 	int buffLen = strlen(ss->pszDataBuff);
 	*(ss->pszDataBuff+buffLen)= ss->cIn;
 	*(ss->pszDataBuff+buffLen+1)='\0';
 
 	//find start handshake
-	char *streamStart = strstr( ss->pszDataBuff, "$FB$");
+	char *streamStart = strstr( ss->pszDataBuff, ss->framePairs.pszFrameStart);
 	if(streamStart == NULL) {
-		if(strlen(ss->pszDataBuff) >= 128)
+		if(strlen(ss->pszDataBuff) >= 128) {
 			//the buffer has gotten too long. truncate it while waiting for a good frame
-			ss->pszDataBuff = realloc(ss->pszDataBuff, sizeof(char) * 3);
-		return;
+			//ss->pszDataBuff = realloc(ss->pszDataBuff, sizeof(char) * 4);
+			free(ss->pszDataBuff);
+			ss->pszDataBuff = NULL;
+			//*(ss->pszDataBuff+3)='\0';
+			return -3;
+		}
+		return -1;
 	}
 	streamStart += 4;
 	//find end handshake
-	char *streamEnd = strstr( ss->pszDataBuff, "$FE$");
+	char *streamEnd = strstr( streamStart, ss->framePairs.pszFrameEnd);
 	if(streamEnd == NULL)
-		return;
+		return -1;
 	int dataStreamLen = (streamEnd - streamStart);
 	char *dataStream = calloc(dataStreamLen + 1, sizeof(char));
 	strncpy(dataStream, streamStart, dataStreamLen);
+	ss->blah = dataStream;
+	free(ss->pszDataBuff);
+	ss->pszDataBuff = NULL;
+	return 1;
 
 }
 

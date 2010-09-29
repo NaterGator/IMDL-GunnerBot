@@ -204,7 +204,7 @@ void sendCommandToLCD(struct LCDinfo *pLCD, unsigned int nextCmd[] )  {
 }
 
 void sendIntToLCD( struct LCDinfo *pLCD, int iInput ){
-	char digits[6]={'\0','\0','\0','\0','\0','\0'};
+	char digits[10]={'\0','\0','\0','0','\0','\0','\0','\0','\0','\0'};
 	char *pDigits = &digits[4];
 	if( iInput < 0 ) {
 		sendCharToLCD(pLCD, '-');
