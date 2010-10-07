@@ -29,8 +29,8 @@ int serialStreamProcessChar( struct serialstream_struct *ss ){
 		return -2;
 
 	int buffLen = strlen(ss->pszDataBuff);
-	*(ss->pszDataBuff+buffLen)= ss->cIn;
-	*(ss->pszDataBuff+buffLen+1)='\0';
+	*((ss->pszDataBuff)+buffLen)= ss->cIn;
+	*((ss->pszDataBuff)+buffLen+1)='\0';
 
 	//find start handshake
 	char *streamStart = strstr( ss->pszDataBuff, ss->framePairs.pszFrameStart);
@@ -53,7 +53,7 @@ int serialStreamProcessChar( struct serialstream_struct *ss ){
 	int dataStreamLen = (streamEnd - streamStart);
 	char *dataStream = calloc(dataStreamLen + 1, sizeof(char));
 	strncpy(dataStream, streamStart, dataStreamLen);
-	ss->blah = dataStream;
+	ss->pszFrame = dataStream;
 	free(ss->pszDataBuff);
 	ss->pszDataBuff = NULL;
 	return 1;
@@ -61,5 +61,18 @@ int serialStreamProcessChar( struct serialstream_struct *ss ){
 }
 
 void runSerialStreamCallbackQueue( struct serialstream_struct *ss ) {
-
+	char *pTok = strtok(ss->pszDataBuff,ss->framePairs.cDelimiter);
+	char *pszParam;
+	while(pTok != NULL) {
+		for(int i=0; i < ss->numCallbacks; i++) {
+			if( strcmp(pTok, ss->callbacks[i].tag) == 0 ) {
+				if( pszParam == NULL) pszParam = strtok( NULL, ss->framePairs.cDelimiter);
+				(*(ss->callbacks[i].dataCallback))(pszParam);
+				break;
+			}
+		}
+		pTok = strtok( NULL, ss->framePairs.cDelimiter);
+		free(pszParam);
+		pszParam = NULL;
+	}
 }

@@ -1,0 +1,3 @@
+set solib-search-path /home/nate/opencv_android/android-opencv-read-only/samples/CVCamera/obj/local/armeabi-v7a
+directory /opt/crystax-android-ndk/build/platforms/android-8/arch-arm/usr/include
+directory /home/nate/opencv_android/android-opencv-read-only/samples/CVCamera/jni

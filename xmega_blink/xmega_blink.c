@@ -27,7 +27,7 @@ int main(void) {
 	struct LCDconfig twoLines = {0};
 	struct USARTconfig smirfSart = {0};
 	struct serialstream_struct serialData = {0};
-	struct ss_framing frameSeq = {"$FB$", "$FE$"};
+	struct ss_framing frameSeq = {"$FB$", "$FE$", "|"};
 	NEW_SMOOTH(ADCAsmooth, 20);
 
 	unsigned int dir = 0;
@@ -57,17 +57,17 @@ int main(void) {
 
 	smirfSart.USARTmap = &USARTE1;
 	smirfSart.PORTmap = &PORTE;
-//	initUsart( smirfSart.this );
+	initUsart( smirfSart.this );
 
-	sendStringToLCD(avrLCD.this, "CdS ADC Value: ");
+//	sendStringToLCD(avrLCD.this, "CdS ADC Value: ");
 	while(1){
 		_delay_ms(10);
 
 		//Move cursor back to start of 2nd line
-		setLCDCursor(avrLCD.this, twoLines.lineLength);
+	//	setLCDCursor(avrLCD.this, twoLines.lineLength);
 
-		sendIntToLCD(avrLCD.this, adcSmooth(&ADCAsmooth, ADCA0()));
-		sendStringToLCD(avrLCD.this, "   "); //clears any leftover digits (no zero padding)
+		//sendIntToLCD(avrLCD.this, adcSmooth(&ADCAsmooth, ADCA0()));
+		//sendStringToLCD(avrLCD.this, "   "); //clears any leftover digits (no zero padding)
 		if(dir == 1) PORTQ.OUTSET = 1;
 		else	PORTQ.OUTCLR = 1;
 		dir = !dir;
@@ -91,7 +91,7 @@ ISR( USARTE1_RXC_vect ){
 
 	if( retCode == 1 ) {
 		clearLCD(LCD);
-		sendStringToLCD(LCD, blueSmirfStream->blah);
+		sendStringToLCD(LCD, blueSmirfStream->pszFrame);
 	}
 
 

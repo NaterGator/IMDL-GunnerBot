@@ -5,17 +5,18 @@ struct serialstream_struct;
 
 struct ss_callback_pair {
 	char *tag;
-	void (*dataCallback)(struct serialstream_struct *);
+	void (*dataCallback)(char *);
 };
 
 struct ss_framing {
 	char *pszFrameStart;
 	char *pszFrameEnd;
+	char *cDelimiter;
 };
 
 struct serialstream_struct {
 	char *pszDataBuff;
-	char *blah;
+	char *pszFrame;
 	char cIn;
 	struct ss_framing framePairs;
 	int	numCallbacks;
