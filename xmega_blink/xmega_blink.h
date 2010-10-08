@@ -21,6 +21,8 @@ struct adcSmooth_struct {
 
 
 void ADCAInit(void);
+void frameHandler( char *pszFrame );
+void frameHandlerLower( char *pszFrame );
 void initXmega( void );
 unsigned int ADCA0(void);
 unsigned int	adcSmooth(struct adcSmooth_struct *smoother, unsigned int iNewVal);

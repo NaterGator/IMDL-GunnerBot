@@ -18,9 +18,6 @@
 struct LCDinfo* LCD;
 struct serialstream_struct *blueSmirfStream;
 
-char data='A';
-
-
 
 int main(void) {
 	struct LCDinfo avrLCD = {0};
@@ -39,7 +36,12 @@ int main(void) {
 	LCD = &avrLCD;
 	smirfSart.this = &smirfSart;
 	serialData.framePairs = frameSeq;
+
 	blueSmirfStream = &serialData;
+	//serialstreamAddCallbackPair( blueSmirfStream, "print2", &frameHandlerLower );
+	//printCallback.tag="print2";
+	//printCallback.dataCallback=&frameHandlerLower;
+	//serialstreamAddCallbackPair( blueSmirfStream, &printCallback );
 
 	twoLines.cursorInc = 1;
 	twoLines.displayEnable = 1;
@@ -54,6 +56,9 @@ int main(void) {
 	PORTK.DIRSET = 0xFF;
 	PORTQ.DIRSET = 1;
 	initLCD( avrLCD.this, 1 );
+	//sendIntToLCD(avrLCD.this, serialstreamAddCallbackPair( blueSmirfStream, &printCallback ));
+	serialstreamAddCallbackPair( blueSmirfStream, "zrint", &frameHandler );
+	serialstreamAddCallbackPair( blueSmirfStream, "print2", &frameHandlerLower );
 
 	smirfSart.USARTmap = &USARTE1;
 	smirfSart.PORTmap = &PORTE;
@@ -61,16 +66,16 @@ int main(void) {
 
 //	sendStringToLCD(avrLCD.this, "CdS ADC Value: ");
 	while(1){
-		_delay_ms(10);
+		runSerialStreamCallbackQueue(&serialData);
 
 		//Move cursor back to start of 2nd line
 	//	setLCDCursor(avrLCD.this, twoLines.lineLength);
 
 		//sendIntToLCD(avrLCD.this, adcSmooth(&ADCAsmooth, ADCA0()));
 		//sendStringToLCD(avrLCD.this, "   "); //clears any leftover digits (no zero padding)
-		if(dir == 1) PORTQ.OUTSET = 1;
-		else	PORTQ.OUTCLR = 1;
-		dir = !dir;
+		//if(dir == 1) PORTQ.OUTSET = 1;
+		//else	PORTQ.OUTCLR = 1;
+		//dir = !dir;
 	}
 	return 0;
 }
@@ -86,14 +91,10 @@ void initXmega( void ) {
 }
 
 ISR( USARTE1_RXC_vect ){
+	//Check for buffer overflow, toggle debug LED if it happens. Shame on you!
+	if( (USARTE1.STATUS & USART_BUFOVF_bm) == 8) PORTQ.OUT = 1 & (PORTQ.OUT ^ 1);
 	blueSmirfStream->cIn = USARTE1_DATA;
-	int retCode = serialStreamProcessChar( blueSmirfStream );
-
-	if( retCode == 1 ) {
-		clearLCD(LCD);
-		sendStringToLCD(LCD, blueSmirfStream->pszFrame);
-	}
-
+	serialStreamProcessChar( blueSmirfStream );
 
 }
 
@@ -129,4 +130,16 @@ unsigned int adcSmooth(struct adcSmooth_struct *smoother, unsigned int iNewVal) 
 	smoother->avg = tmpAvg;
 	smoother->prevVals[smoother->index++] = iNewVal;
 	return smoother->avg;
+}
+
+void frameHandler( char *pszFrame ) {
+	setLCDCursor(LCD, 0);
+	sendStringToLCD(LCD, pszFrame);
+	sendStringToLCD(LCD, "    ");
+}
+
+void frameHandlerLower( char *pszFrame ) {
+	setLCDCursor(LCD, LCD->config.lineLength);
+	sendStringToLCD(LCD, pszFrame);
+	sendStringToLCD(LCD, "    ");
 }

@@ -86,7 +86,7 @@ void initLCD( struct LCDinfo *pLCD, int clear ) {
 	data[3] = pLCD->config.twoLines;
 	data[2] = pLCD->config.tallFont;
 	sendCommandToLCD( pLCD, data );
-	_delay_us(40);
+	_delay_us(60);
 	if( pLCD->pszLine1 == NULL ) {
 		pLCD->pszLine1 = malloc( sizeof( char ) * ( pLCD->config.lineLength + 1 ) );
 		memset( pLCD->pszLine1, ' ', ( pLCD->config.lineLength ) );
@@ -108,7 +108,7 @@ void initLCD( struct LCDinfo *pLCD, int clear ) {
 	data[1] = 0;
 	data[0] = 0;
 	sendCommandToLCD( pLCD, data ); //Display, Cursor, Blink Off
-	_delay_us(40);
+	_delay_us(60);
 	if(clear)
 		clearLCD( pLCD );
 	else
@@ -126,23 +126,23 @@ void initLCD( struct LCDinfo *pLCD, int clear ) {
 	data[1] = pLCD->config.cursorInc;
 	data[0] = pLCD->config.displayShift;
 	sendCommandToLCD( pLCD, data );
-	_delay_us(40);
+	_delay_us(60);
 	//Set display, cursor, blink
 	data[3] = 1;
 	data[2] = pLCD->config.displayEnable;
 	data[1] = pLCD->config.cursorEnable;
 	data[0] = pLCD->config.cursorBlink;
 	sendCommandToLCD( pLCD, data );
-	_delay_us(40);
+	_delay_us(60);
 }
 
 void LCDBusWrite( volatile int * pBus, unsigned int iData) {
 	*pBus = iData & 0xF3;
-	_delay_us(50);
+	_delay_us(75);
 	*pBus = iData | 0x08;
-	_delay_us(50);
+	_delay_us(75);
 	*pBus = iData & 0xF3;
-	_delay_us(100);
+	_delay_us(120);
 }
 
 void resendBuffToLCD( struct LCDinfo *pLCD ) {
@@ -241,7 +241,7 @@ void setLCDCursor( struct LCDinfo *pLCD, unsigned int iLoc ) {
 	data[1] = (iMemPos & 0x2) >> 1;
 	data[0] = iMemPos & 0x1;
 	sendCommandToLCD( pLCD, data );
-	_delay_us(40);
+	_delay_us(60);
 }
 
 void sendStringToLCD( struct LCDinfo *pLCD, char *pszInput ) {

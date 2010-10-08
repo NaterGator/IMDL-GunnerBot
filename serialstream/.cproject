@@ -28,6 +28,9 @@
 <tool id="de.innot.avreclipse.tool.compiler.winavr.lib.release.1833186845" name="AVR Compiler" superClass="de.innot.avreclipse.tool.compiler.winavr.lib.release">
 <option id="de.innot.avreclipse.compiler.option.debug.level.952350188" name="Generate Debugging Info" superClass="de.innot.avreclipse.compiler.option.debug.level" value="de.innot.avreclipse.compiler.option.debug.level.none" valueType="enumerated"/>
 <option id="de.innot.avreclipse.compiler.option.optimize.890886704" name="Optimization Level" superClass="de.innot.avreclipse.compiler.option.optimize" value="de.innot.avreclipse.compiler.optimize.size" valueType="enumerated"/>
+<option id="de.innot.avreclipse.compiler.option.incpath.31974566" superClass="de.innot.avreclipse.compiler.option.incpath" valueType="includePath">
+<listOptionValue builtIn="false" value="&quot;${workspace_loc:/lcdiface}&quot;"/>
+</option>
 <inputType id="de.innot.avreclipse.compiler.winavr.input.41772274" name="C Source Files" superClass="de.innot.avreclipse.compiler.winavr.input"/>
 </tool>
 <tool id="de.innot.avreclipse.tool.cppcompiler.lib.release.761591710" name="AVR C++ Compiler" superClass="de.innot.avreclipse.tool.cppcompiler.lib.release">
