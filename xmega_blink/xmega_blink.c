@@ -31,6 +31,7 @@ int main(void) {
 
 	initXmega();
 	ADCAInit();
+	ServoCInit();
 
 	avrLCD.this = &avrLCD;
 	LCD = &avrLCD;
@@ -54,12 +55,14 @@ int main(void) {
 	avrLCD.pLCDDataBus = (volatile int *) &PORTK_OUT;
 
 	PORTK.DIRSET = 0xFF;
+	PORTB.DIRSET = PIN0_bm | PIN1_bm | PIN2_bm | PIN3_bm;
 	PORTQ.DIRSET = 1;
 	initLCD( avrLCD.this, 1 );
 	//sendIntToLCD(avrLCD.this, serialstreamAddCallbackPair( blueSmirfStream, &printCallback ));
-	serialstreamAddCallbackPair( blueSmirfStream, "zrint", &frameHandler );
-	serialstreamAddCallbackPair( blueSmirfStream, "print2", &frameHandlerLower );
-
+	serialstreamAddCallbackPair( blueSmirfStream, "setL", &setSpeedL );
+	serialstreamAddCallbackPair( blueSmirfStream, "setR", &setSpeedR );
+	serialstreamAddCallbackPair( blueSmirfStream, "dirL", &setDirL );
+	serialstreamAddCallbackPair( blueSmirfStream, "dirR", &setDirR );
 	smirfSart.USARTmap = &USARTE1;
 	smirfSart.PORTmap = &PORTE;
 	initUsart( smirfSart.this );
@@ -132,14 +135,86 @@ unsigned int adcSmooth(struct adcSmooth_struct *smoother, unsigned int iNewVal) 
 	return smoother->avg;
 }
 
-void frameHandler( char *pszFrame ) {
-	setLCDCursor(LCD, 0);
-	sendStringToLCD(LCD, pszFrame);
-	sendStringToLCD(LCD, "    ");
+void setSpeedL( char *pszFrame ) {
+	unsigned int iVal = atoi(pszFrame);
+	clearLCD(LCD);
+	sendStringToLCD(LCD, "Set L to: ");
+	sendIntToLCD(LCD, iVal);
+	TCC0.CCA = iVal;
 }
 
-void frameHandlerLower( char *pszFrame ) {
-	setLCDCursor(LCD, LCD->config.lineLength);
-	sendStringToLCD(LCD, pszFrame);
-	sendStringToLCD(LCD, "    ");
+void setSpeedR( char *pszFrame ) {
+	//setLCDCursor(LCD, LCD->config.lineLength);
+	//sendStringToLCD(LCD, pszFrame);
+	unsigned int iVal = atoi(pszFrame);
+	clearLCD(LCD);
+	sendStringToLCD(LCD, "Set R to: ");
+	sendIntToLCD(LCD, iVal);
+	TCC0.CCB = iVal;
+}
+
+void setDirL( char *pszFrame ) {
+	//setLCDCursor(LCD, LCD->config.lineLength);
+	//sendStringToLCD(LCD, pszFrame);
+	int prevSpeed = TCC0_CCA;
+	if(prevSpeed != 0 ){
+		TCC0_CCA = 0;
+		_delay_ms(200);
+	}
+
+	clearLCD(LCD);
+	if(strcmp(pszFrame,"F") == 0) {
+		PORTB_OUT = (PORTB_OUT & 0xFC) | PIN0_bm;
+		sendStringToLCD(LCD, "Set L to fwd");
+	} else if(strcmp(pszFrame,"R") == 0) {
+		PORTB_OUT = (PORTB_OUT & 0xFC) | PIN1_bm;
+		sendStringToLCD(LCD, "Set L to rev");
+	} else {
+		sendStringToLCD(LCD, "Could not understand Ldir");
+	}
+	if(prevSpeed != 0 && TCC0_CCA == 0)
+		TCC0_CCA = prevSpeed;
+}
+
+void setDirR( char *pszFrame ) {
+	//setLCDCursor(LCD, LCD->config.lineLength);
+	//sendStringToLCD(LCD, pszFrame);
+	int prevSpeed = TCC0_CCB;
+	if(prevSpeed != 0 ){
+		TCC0_CCB = 0;
+		_delay_ms(200);
+	}
+
+	clearLCD(LCD);
+	if(strcmp(pszFrame,"F") == 0) {
+		PORTB_OUT = (PORTB_OUT & 0xF3) | PIN2_bm;
+		sendStringToLCD(LCD, "Set R to fwd");
+	} else if(strcmp(pszFrame,"R") == 0) {
+		PORTB_OUT = (PORTB_OUT & 0xF3) | PIN3_bm;
+		sendStringToLCD(LCD, "Set R to rev");
+	} else {
+		sendStringToLCD(LCD, "Could not understand Rdir");
+	}
+	if(prevSpeed != 0 && TCC0_CCB == 0)
+			TCC0_CCB = prevSpeed;
+}
+
+
+void ServoCInit(void)
+{
+	TCC0_CTRLA = 0x05;				//set TCC0_CLK to CLK/64
+	TCC0_CTRLB = 0xF3;				//Enable OC A, B, C, and D.  Set to Single Slope PWM
+									//OCnX = 1 from Bottom to CCx and 0 from CCx to Top
+	TCC0_PER = 10000;				//20ms / (1/(32MHz/64)) = 10000.  PER = Top
+	TCC1_CTRLA = 0x05;				//set TCC1_CLK to CLK/64
+	TCC1_CTRLB = 0x33;				//Enable OC A and B.  Set to Single Slope PWM
+									//OCnX = 1 from Bottom to CCx and 0 from CCx to Top
+	TCC1_PER = 10000;				//20ms / (1/(32MHz/64)) = 10000.  PER = Top
+	PORTC_DIR = 0x3F;				//set PORTC5:0 to output
+	TCC0_CCA = 0;					//PWMC0 off
+	TCC0_CCB = 0;					//PWMC1 off
+	TCC0_CCC = 0;					//PWMC2 off
+	TCC0_CCD = 0;					//PWMC3 off
+	TCC1_CCA = 0;					//PWMC4 off
+	TCC1_CCB = 0;					//PWMC5 off
 }

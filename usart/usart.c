@@ -12,7 +12,7 @@ void initUsart( struct USARTconfig *conf) {
 	conf->USARTmap->BAUDCTRLB = 0;
 	/*
 	 *
-	 *  Baud rate 115,200
+	 *  Baud rate 57,600
 	 *  8 bits
 	 *  No Parity
 	 *  1 stop bit

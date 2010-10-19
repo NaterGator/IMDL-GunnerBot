@@ -7,7 +7,7 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
-import android.graphics.Bitmap;
+import android.content.Intent;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
@@ -18,11 +18,12 @@ import android.os.Message;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.view.Window;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.SeekBar.OnSeekBarChangeListener;
 
 
 public class RoboCam extends Activity {
@@ -42,6 +43,14 @@ public class RoboCam extends Activity {
     // Layout Views
     //private ListView mConversationView
     private Button mConnectButton;
+    private Button mLfwd;
+    private Button mLrev;
+    private Button mRfwd;
+    private Button mRrev;
+    
+    private SeekBar mLspeed;
+    private SeekBar mRspeed;
+    
     
     private TextView mStatusText;
     private TextView mDebugText;
@@ -58,20 +67,19 @@ public class RoboCam extends Activity {
     // Member object for the chat services
     private RoboCamComm mCommService = null;
     private PreviewSurface mPreview;
-	private V1DisplayProcessor mDisplayProc = null;
+    private TiltSensor mTilter = null;
 	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		requestWindowFeature(Window.FEATURE_NO_TITLE);
+		//requestWindowFeature(Window.FEATURE_NO_TITLE);
 		
-		mPreview = new PreviewSurface( this );
+		//mPreview = new PreviewSurface( this );
 		
-		setContentView(mPreview);
-		
+		//setContentView(mPreview);
+		setContentView(R.layout.main);
         // Get local Bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        mDisplayProc = new V1DisplayProcessor(this);
 
 	}
 	
@@ -81,13 +89,14 @@ public class RoboCam extends Activity {
 
         // If BT is not on, request that it be enabled.
         // setupChat() will then be called during onActivityResult
-     /*   if (!mBluetoothAdapter.isEnabled()) {
+        if (!mBluetoothAdapter.isEnabled()) {
             Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
         // Otherwise, setup the chat session
         } else {
             if (mCommService == null) setupComm();
-        }*/
+        }
+        mTilter = new TiltSensor(this, mCommService);	
     }
     
     @Override
@@ -117,6 +126,17 @@ public class RoboCam extends Activity {
         // Initialize the send button with a listener that for click events
         mConnectButton = (Button) findViewById(R.id.button_connect);
         
+        mLfwd = (Button) findViewById(R.id.Lfwd);
+        mLrev = (Button) findViewById(R.id.Lrev);
+        mRfwd = (Button) findViewById(R.id.Rfwd);
+        mRrev = (Button) findViewById(R.id.Rrev);
+        
+        mLspeed = (SeekBar) findViewById(R.id.Lspeed); 
+        mRspeed = (SeekBar) findViewById(R.id.Rspeed); 
+
+        mLspeed.setMax(10000);
+        mRspeed.setMax(10000);
+        
         
         mConnectButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
@@ -131,6 +151,88 @@ public class RoboCam extends Activity {
             }
         });
 
+        
+        mLfwd.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				if(mCommService.getState() == RoboCamComm.STATE_CONNECTED) {
+					mCommService.write("$FB$dirL|F$FE$ ".getBytes());
+            	}
+			}
+		});
+        
+        mLrev.setOnClickListener(new OnClickListener() {
+			
+			public void onClick(View v) {
+				if(mCommService.getState() == RoboCamComm.STATE_CONNECTED) {
+					mCommService.write("$FB$dirL|R$FE$ ".getBytes());
+            	}			
+			}
+		});
+        
+        mLspeed.setOnSeekBarChangeListener( new OnSeekBarChangeListener() {
+			
+			public void onProgressChanged(SeekBar seekBar, int progress,
+					boolean fromUser) {
+				if(mCommService.getState() == RoboCamComm.STATE_CONNECTED)
+						mCommService.write(("$FB$setL|"+progress+"$FE$ ").getBytes());
+            	
+				
+			}
+
+			@Override
+			public void onStartTrackingTouch(SeekBar seekBar) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void onStopTrackingTouch(SeekBar seekBar) {
+				// TODO Auto-generated method stub
+				
+			}
+		});
+        
+        
+        mRfwd.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				if(mCommService.getState() == RoboCamComm.STATE_CONNECTED) {
+					mCommService.write("$FB$dirR|F$FE$ ".getBytes());
+            	}
+			}
+		});
+        
+        mRrev.setOnClickListener(new OnClickListener() {
+			
+			public void onClick(View v) {
+				if(mCommService.getState() == RoboCamComm.STATE_CONNECTED) {
+					mCommService.write("$FB$dirR|R$FE$ ".getBytes());
+            	}			
+			}
+		});
+        
+        mRspeed.setOnSeekBarChangeListener( new OnSeekBarChangeListener() {
+			
+			public void onProgressChanged(SeekBar seekBar, int progress,
+					boolean fromUser) {
+				if(mCommService.getState() == RoboCamComm.STATE_CONNECTED)
+						mCommService.write(("$FB$setR|"+progress+"$FE$ ").getBytes());
+            	
+				
+			}
+
+			@Override
+			public void onStartTrackingTouch(SeekBar seekBar) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void onStopTrackingTouch(SeekBar seekBar) {
+				// TODO Auto-generated method stub
+				
+			}
+		});
+        
 
         // Initialize the BluetoothChatService to perform bluetooth connections
         
@@ -166,8 +268,6 @@ public class RoboCam extends Activity {
                 break;
             case MESSAGE_DATA_IN:
             		updateDataEdit((StringBuffer)msg.obj);
-            		mDisplayProc.readNewSequence((StringBuffer)msg.obj);
-                	mDisplayProc.updateDisplay();
                 break;
             case MESSAGE_TOAST:
                 Toast.makeText(getApplicationContext(), msg.getData().getString(TOAST),
