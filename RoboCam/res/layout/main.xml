@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:layout_height="fill_parent" android:layout_width="fill_parent">
+    android:layout_height="fill_parent" android:layout_width="fill_parent" android:keepScreenOn="true" android:orientation="vertical">
     
 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/title_text" android:text="Welcome to V1 Virtual interface"></TextView>
-<Button android:layout_width="wrap_content" android:id="@+id/button_connect" android:clickable="true" android:text="Attempt to connect" android:layout_height="wrap_content" android:gravity="center"></Button>
+<LinearLayout android:id="@+id/LinearLayout02" android:layout_width="wrap_content" android:layout_height="wrap_content"><Button android:layout_width="wrap_content" android:id="@+id/button_connect" android:clickable="true" android:text="Attempt to connect" android:layout_height="wrap_content" android:gravity="center"></Button><CheckBox android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/Tilter" android:text="Respond to tilt?"></CheckBox></LinearLayout>
 
 <LinearLayout android:id="@+id/LinearLayout01" android:layout_height="wrap_content" android:layout_width="fill_parent" android:orientation="vertical"><RelativeLayout android:id="@+id/RelativeLayout02" android:layout_height="wrap_content" android:layout_width="fill_parent"><TextView android:layout_height="wrap_content" android:id="@+id/TextView01" android:layout_width="wrap_content" android:text="Left Wheel" android:layout_centerInParent="true" android:layout_alignParentTop="true"></TextView><RelativeLayout android:layout_below="@+id/TextView01" android:id="@+id/RelativeLayout01" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_centerInParent="true"><Button android:layout_width="wrap_content" android:layout_height="wrap_content" android:id="@+id/Lfwd" android:text="Forward" android:layout_below="@+id/TextView01"></Button><Button android:layout_height="wrap_content" android:layout_width="wrap_content" android:text="Reverse" android:id="@+id/Lrev" android:layout_toRightOf="@+id/Lfwd" android:layout_below="@+id/TextView01"></Button></RelativeLayout>
 
@@ -28,6 +27,8 @@
 
 
 <TextView android:layout_height="wrap_content" android:id="@+id/debug_out" android:layout_width="fill_parent"></TextView>
+
+
 
 
 

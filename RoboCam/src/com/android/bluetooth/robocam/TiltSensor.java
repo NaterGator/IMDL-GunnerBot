@@ -14,6 +14,7 @@ public class TiltSensor {
 	private int mSpeedL;
 	private int mSpeedR;
 	private String mDir;
+	public boolean disable = true;
 	
 	public TiltSensor(Context ctex, RoboCamComm commService) {
 		this.mCommService = commService;
@@ -31,7 +32,7 @@ public class TiltSensor {
 
 		@Override
 		public void onSensorChanged(SensorEvent event) {
-			if(event.sensor.getType() == Sensor.TYPE_ORIENTATION) {
+			if(event.sensor.getType() == Sensor.TYPE_ORIENTATION && disable == false ) {
 				/*
 				 * All values are angles in degrees.
 					values[0]: Azimuth, angle between the magnetic north direction and the Y axis, around the Z axis (0 to 359). 0=North, 90=East, 180=South, 270=West
@@ -79,7 +80,7 @@ public class TiltSensor {
 				}
 				if(mDir != dir) {
 					mDir = dir;
-					//mCommService.write( ("$FB$dirL|" + dir + "$FE$  $FB$dirR|" + dir + "$FE$ ").getBytes() );
+					mCommService.write( ("$FB$dirL|" + dir + "$FE$  $FB$dirR|" + dir + "$FE$ ").getBytes() );
 				}
 				//mCommService.write( ("$FB$setL|" + event.values[1] + "$FE$  $FB$setR|" + event.values[2] + "$FE$ " ).getBytes() );
 			}

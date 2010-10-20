@@ -20,9 +20,12 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 
 
@@ -47,6 +50,7 @@ public class RoboCam extends Activity {
     private Button mLrev;
     private Button mRfwd;
     private Button mRrev;
+    private CheckBox mTilt;
     
     private SeekBar mLspeed;
     private SeekBar mRspeed;
@@ -96,7 +100,8 @@ public class RoboCam extends Activity {
         } else {
             if (mCommService == null) setupComm();
         }
-        mTilter = new TiltSensor(this, mCommService);	
+        if(mCommService != null)
+        	mTilter = new TiltSensor(this, mCommService);
     }
     
     @Override
@@ -136,7 +141,8 @@ public class RoboCam extends Activity {
 
         mLspeed.setMax(10000);
         mRspeed.setMax(10000);
-        
+    
+        mTilt = (CheckBox) findViewById(R.id.Tilter);
         
         mConnectButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
@@ -146,11 +152,25 @@ public class RoboCam extends Activity {
             		BluetoothDevice device = mBluetoothAdapter.getRemoteDevice("00:06:66:03:16:E6");
             		mCommService.connect(device);
             	} else if(mCommService.getState() == RoboCamComm.STATE_CONNECTED) {
+            		mCommService.write("$FB$setL|0|setR|0$FE$ ".getBytes());
             		mCommService.stop();
             	}
             }
         });
 
+        
+        mTilt.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+
+			@Override
+			public void onCheckedChanged(CompoundButton buttonView,
+					boolean isChecked) {
+				mTilter.disable = !isChecked;
+				if(isChecked == false)
+					if(mCommService != null)
+						mCommService.write("$FB$setL|0|setR|0$FE$ ".getBytes());
+			}
+        
+        });
         
         mLfwd.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
