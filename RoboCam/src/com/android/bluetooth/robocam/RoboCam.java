@@ -28,6 +28,8 @@ import android.widget.Toast;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 
+import com.android.bluetooth.btComm.btComm;
+
 
 public class RoboCam extends Activity {
 	
@@ -43,6 +45,7 @@ public class RoboCam extends Activity {
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
     
+    
     // Layout Views
     //private ListView mConversationView
     private Button mConnectButton;
@@ -51,7 +54,7 @@ public class RoboCam extends Activity {
     private Button mRfwd;
     private Button mRrev;
     private CheckBox mTilt;
-    
+   
     private SeekBar mLspeed;
     private SeekBar mRspeed;
     
@@ -69,7 +72,7 @@ public class RoboCam extends Activity {
     // Local Bluetooth adapter
     private BluetoothAdapter mBluetoothAdapter = null;
     // Member object for the chat services
-    private RoboCamComm mCommService = null;
+    private btComm mCommService = null;
     private PreviewSurface mPreview;
     private TiltSensor mTilter = null;
 	
@@ -114,7 +117,7 @@ public class RoboCam extends Activity {
         // onResume() will be called when ACTION_REQUEST_ENABLE activity returns.
         if (mCommService != null) {
             // Only if the state is STATE_NONE, do we know that we haven't started already
-            if (mCommService.getState() == RoboCamComm.STATE_DISCONNECTED) {
+            if (mCommService.getState() == btComm.STATE_DISCONNECTED) {
               // Start the Bluetooth chat services
               // do nothing
             }
@@ -147,11 +150,11 @@ public class RoboCam extends Activity {
         mConnectButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 // Establish BT connection
-            	if(mCommService.getState()==RoboCamComm.STATE_DISCONNECTED) {
+            	if(mCommService.getState()==btComm.STATE_DISCONNECTED) {
             		//TODO: figure out how to get device
             		BluetoothDevice device = mBluetoothAdapter.getRemoteDevice("00:06:66:03:16:E6");
             		mCommService.connect(device);
-            	} else if(mCommService.getState() == RoboCamComm.STATE_CONNECTED) {
+            	} else if(mCommService.getState() == btComm.STATE_CONNECTED) {
             		mCommService.write("$FB$setL|0|setR|0$FE$ ".getBytes());
             		mCommService.stop();
             	}
@@ -174,8 +177,9 @@ public class RoboCam extends Activity {
         
         mLfwd.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				if(mCommService.getState() == RoboCamComm.STATE_CONNECTED) {
+				if(mCommService.getState() == btComm.STATE_CONNECTED) {
 					mCommService.write("$FB$dirL|F$FE$ ".getBytes());
+					
             	}
 			}
 		});
@@ -183,7 +187,7 @@ public class RoboCam extends Activity {
         mLrev.setOnClickListener(new OnClickListener() {
 			
 			public void onClick(View v) {
-				if(mCommService.getState() == RoboCamComm.STATE_CONNECTED) {
+				if(mCommService.getState() == btComm.STATE_CONNECTED) {
 					mCommService.write("$FB$dirL|R$FE$ ".getBytes());
             	}			
 			}
@@ -193,7 +197,7 @@ public class RoboCam extends Activity {
 			
 			public void onProgressChanged(SeekBar seekBar, int progress,
 					boolean fromUser) {
-				if(mCommService.getState() == RoboCamComm.STATE_CONNECTED)
+				if(mCommService.getState() == btComm.STATE_CONNECTED)
 						mCommService.write(("$FB$setL|"+progress+"$FE$ ").getBytes());
             	
 				
@@ -215,7 +219,7 @@ public class RoboCam extends Activity {
         
         mRfwd.setOnClickListener(new OnClickListener() {
 			public void onClick(View v) {
-				if(mCommService.getState() == RoboCamComm.STATE_CONNECTED) {
+				if(mCommService.getState() == btComm.STATE_CONNECTED) {
 					mCommService.write("$FB$dirR|F$FE$ ".getBytes());
             	}
 			}
@@ -224,7 +228,7 @@ public class RoboCam extends Activity {
         mRrev.setOnClickListener(new OnClickListener() {
 			
 			public void onClick(View v) {
-				if(mCommService.getState() == RoboCamComm.STATE_CONNECTED) {
+				if(mCommService.getState() == btComm.STATE_CONNECTED) {
 					mCommService.write("$FB$dirR|R$FE$ ".getBytes());
             	}			
 			}
@@ -234,7 +238,7 @@ public class RoboCam extends Activity {
 			
 			public void onProgressChanged(SeekBar seekBar, int progress,
 					boolean fromUser) {
-				if(mCommService.getState() == RoboCamComm.STATE_CONNECTED)
+				if(mCommService.getState() == btComm.STATE_CONNECTED)
 						mCommService.write(("$FB$setR|"+progress+"$FE$ ").getBytes());
             	
 				
@@ -256,7 +260,7 @@ public class RoboCam extends Activity {
 
         // Initialize the BluetoothChatService to perform bluetooth connections
         
-        mCommService = new RoboCamComm(this, mHandler);
+        mCommService = new btComm(this, mHandler);
         
     }
     
@@ -267,24 +271,25 @@ public class RoboCam extends Activity {
             switch (msg.what) {
             case MESSAGE_STATE_CHANGE:
                 switch (msg.arg1) {
-                case RoboCamComm.STATE_CONNECTED:
+                case btComm.STATE_CONNECTED:
                 	//TODO: disable button
                 	mStatusText.setText("Connected.");
                 	mConnectButton.setText("Disconnect.");
                 	mConnectButton.setClickable(true);
                     break;
-                case RoboCamComm.STATE_CONNECTING:
+                case btComm.STATE_CONNECTING:
                 	//Do nothing
                 	mStatusText.setText("Connecting...");
                 	mConnectButton.setClickable(false);                    
                     break;
-                case RoboCamComm.STATE_DISCONNECTED:
+                case btComm.STATE_DISCONNECTED:
                 	//TODO: Enable button
                 	mStatusText.setText("Disconnected.");
                 	mConnectButton.setText("Connect");
                 	mConnectButton.setClickable(true);
                     break;
                 }
+                
                 break;
             case MESSAGE_DATA_IN:
             		updateDataEdit((StringBuffer)msg.obj);

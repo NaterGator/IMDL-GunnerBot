@@ -46,6 +46,7 @@ void resendBuffToLCD( struct LCDinfo *pLCD );
 extern void sendCharToLCD( struct LCDinfo *pLCD, char iChar );
 void sendCommandToLCD(struct LCDinfo *pLCD, unsigned int nextCmd[] );
 extern void sendIntToLCD( struct LCDinfo *pLCD, int iInput );
+extern void sendUIntToLCD( struct LCDinfo *pLCD, unsigned int iInput );
 extern void setLCDCursor( struct LCDinfo *pLCD, unsigned int iLoc );
 extern void sendStringToLCD( struct LCDinfo *pLCD, char *pszInput );
 

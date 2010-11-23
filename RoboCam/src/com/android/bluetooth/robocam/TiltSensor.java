@@ -6,17 +6,19 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
+import com.android.bluetooth.btComm.btComm;
+
 
 public class TiltSensor {
 
 	private SensorManager mSensorManager;
-	private RoboCamComm mCommService;
+	private btComm mCommService;
 	private int mSpeedL;
 	private int mSpeedR;
 	private String mDir;
 	public boolean disable = true;
 	
-	public TiltSensor(Context ctex, RoboCamComm commService) {
+	public TiltSensor(Context ctex, btComm commService) {
 		this.mCommService = commService;
 		mSensorManager = (SensorManager) ctex.getSystemService(Context.SENSOR_SERVICE);
 		mSensorManager.registerListener(listener, mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION), SensorManager.SENSOR_DELAY_GAME);
@@ -27,7 +29,7 @@ public class TiltSensor {
 		@Override
 		public void onAccuracyChanged(Sensor sensor, int accuracy) {
 			// TODO Auto-generated method stub
-			
+		
 		}
 
 		@Override

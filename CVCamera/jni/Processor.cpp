@@ -79,7 +79,7 @@ void Processor::detectAndDrawCircles(int input_idx, image_pool* pool) {
 	Mat mask;
 	Mat* img = pool->getImage(input_idx);
 
-	cvtColor(*img, hsvImg, CV_RGB2HLS);
+	cvtColor(*img, hsvImg, CV_BGR2HLS);
 
 /*	inRange(*img, Scalar(0, 0*255, 0*255, 0),
 	            Scalar(0*255, 1*255, 0*255, 0),mask);*/
@@ -96,11 +96,33 @@ void Processor::detectAndDrawCircles(int input_idx, image_pool* pool) {
 	//float h[2] = {0.1,0.3};//{0.134,0.26};//{0.2,0.33};//{0,1};
 	//float s[2] = {0.13,0.7};//{0.06,0.455};//{0.04,0.277};
 	//float v[2] = {0.73,1};//{0.61,0.94};
-	float h[2] = {0.1425,0.31};//{0.134,0.26};//{0.2,0.33};//{0,1}; 37-79?
+	/*float h[2] = {0.1425,0.31};//{0.134,0.26};//{0.2,0.33};//{0,1}; 37-79?
 	float s[2] = {0.12,1};//{0.06,0.455};//{0.04,0.277}; 30-255
-	float l[2] = {0.48,1};//{0.61,0.94}; //.48 for S is WAY too high for bright pics, maybe meant L
-	inRange(hsvImg, Scalar(h[0]*180, l[0]*256, s[0]*256, 0),
-            Scalar(h[1]*180, l[1]*256, s[1]*256, 0), mask);
+	float l[2] = {0.48,1};//{0.61,0.94}; //.48 for S is WAY too high for bright pics, maybe meant L*/
+
+    int *hmin = new int;
+    int *hmax = new int;
+    int *lmin = new int;
+    int *lmax = new int;
+    int *smin = new int;
+    int *smax = new int;
+    int *morpho = new int;
+    int *morphc = new int;
+    int *canny = new int;
+    int *accum = new int;
+    *hmin=48;//(int) (0.1425*180);
+    *hmax=93;//(int) (0.31*180);
+    *lmin=94;//(int) (0.12*256);
+    *lmax=254;
+    *smin=87;//(int) (0.48*256);
+    *smax=256;
+    *morpho = 10;
+    *morphc = 3;
+    *canny = 225;
+    *accum = 50;
+
+	inRange(hsvImg, Scalar(*hmin, *lmin, *smin, 0),
+			Scalar(*hmax, *lmax, *smax, 0), mask);
 	//adaptiveThreshold(mask, mask, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 5, 0);
 	//Mat edges;
 	//Canny(mask, edges, 300, 240);
@@ -115,8 +137,8 @@ void Processor::detectAndDrawCircles(int input_idx, image_pool* pool) {
 //	cvtColor(mask, mask, CV_HSV2BGR);
 	//cvtColor(mask, hsvImg, CV_BGR2GRAY);
 //	GaussianBlur(mask, mask, Size(3, 3), 2, 2 );
-	morphologyEx(mask, mask, MORPH_CLOSE, getStructuringElement(MORPH_RECT, Size(11,11)));
-	morphologyEx(mask, mask, MORPH_OPEN, getStructuringElement(MORPH_RECT, Size(11,11)));
+	morphologyEx(mask, mask, MORPH_CLOSE, getStructuringElement(MORPH_RECT, Size(*morphc,*morphc)));
+	morphologyEx(mask, mask, MORPH_OPEN, getStructuringElement(MORPH_RECT, Size(*morpho,*morpho)));
 	GaussianBlur(mask, mask, Size(9, 9), 2, 2 );
 	Mat tmp;
 	cvtColor(mask, tmp, CV_GRAY2BGR);
@@ -129,8 +151,8 @@ void Processor::detectAndDrawCircles(int input_idx, image_pool* pool) {
 					CV_HOUGH_GRADIENT, 	//method
 					2, 					//precision
 					mask.rows/2,		//minimum distance
-					150,
-					75 );
+					*canny,
+					*accum );
 /*	std::stringstream output;
 	output << "circles.size(): " << circles.size();
 	__android_log_print(ANDROID_LOG_INFO, "processor", output.str().c_str());*/

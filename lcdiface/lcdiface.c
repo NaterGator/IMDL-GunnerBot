@@ -220,6 +220,20 @@ void sendIntToLCD( struct LCDinfo *pLCD, int iInput ){
 		sendCharToLCD( pLCD, *(pDigits++) );
 }
 
+void sendUIntToLCD( struct LCDinfo *pLCD, unsigned int iInput ){
+	char digits[10]={'\0','\0','\0','0','\0','\0','\0','\0','\0','\0'};
+	char *pDigits = &digits[6];
+	while(1) {
+		*pDigits = (iInput % 10) + 0x30;
+		iInput /= 10;
+		if(iInput == 0) break;
+		pDigits--;
+	}
+	while(*pDigits != '\0')
+		sendCharToLCD( pLCD, *(pDigits++) );
+}
+
+
 void setLCDCursor( struct LCDinfo *pLCD, unsigned int iLoc ) {
 	unsigned int data[8];
 	unsigned int iMemPos=0;

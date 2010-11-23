@@ -58,7 +58,7 @@ public class CVCamera extends Activity {
 		return progressDialog;
 	}
 
-	
+
 	void toasts(int id) {
 		switch (id) {
 		case DIALOG_OPENING_TUTORIAL:
@@ -168,7 +168,7 @@ public class CVCamera extends Activity {
 	public void setOrientation() {
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 	}
-
+	
 	/**
 	 * Maximize the application.
 	 */
@@ -235,7 +235,7 @@ public class CVCamera extends Activity {
 		super.onOptionsMenuClosed(menu);
 	}
 
-	
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -469,9 +469,9 @@ public class CVCamera extends Activity {
 										.getNumberDetectedChessboards()));
 
 			}
-
+			
 			captureChess = false;
-
+			
 			if (processor.getNumberDetectedChessboards() == 10) {
 				runOnUiThread(new Runnable() {
 

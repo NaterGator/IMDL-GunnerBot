@@ -59,5 +59,7 @@ int serialstreamAddCallbackPair( struct serialstream_struct *ss, const char * ta
 extern int serialStreamProcessChar( struct serialstream_struct *ss );
 extern void runSerialStreamCallbackQueue( struct serialstream_struct *ss );
 
+#define SRCALLBACK(name) void name(char *pszFrame)
+
 
 #endif
