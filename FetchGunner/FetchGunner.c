@@ -21,6 +21,8 @@
 #include <stdlib.h>
 #include "FetchGunner.h"
 
+struct motorData motors = {9000, 1700};
+
 int main(void) {
 
 	initXmega();
@@ -63,7 +65,7 @@ int main(void) {
 
 
 	//Set PORTB for use with motor controllers
-	PORTB.DIRSET = PIN0_bm | PIN1_bm | PIN2_bm | PIN3_bm;
+	PORTB.DIRSET = PIN0_bm | PIN1_bm | PIN2_bm | PIN3_bm | PIN4_bm;
 
 	//PORTQ debug light, used to notify of a USART buffer overrun
 	PORTQ.DIRSET = 1;
@@ -99,10 +101,10 @@ int main(void) {
 	/*
 	 * Add callbacks for serialstream processing inside the main behavior loop
 	 */
-	serialstreamAddCallbackPair( blueSmirfStream, "setL", &setSpeedL );
-	serialstreamAddCallbackPair( blueSmirfStream, "setR", &setSpeedR );
-	serialstreamAddCallbackPair( blueSmirfStream, "dirL", &setDirL );
-	serialstreamAddCallbackPair( blueSmirfStream, "dirR", &setDirR );
+	serialstreamAddCallbackPair( blueSmirfStream, "setL", &csetSpeedL );
+	serialstreamAddCallbackPair( blueSmirfStream, "setR", &csetSpeedR );
+	serialstreamAddCallbackPair( blueSmirfStream, "dirL", &csetDirL );
+	serialstreamAddCallbackPair( blueSmirfStream, "dirR", &csetDirR );
 	serialstreamAddCallbackPair( blueSmirfStream, "cir", &readCircle );
 
 
@@ -219,83 +221,152 @@ unsigned int adcSmooth(struct adcSmooth_struct *smoother, unsigned int iNewVal) 
 	return smoother->avg;
 }
 
-void setSpeedL( char *pszFrame ) {
+void csetSpeedL( char *pszFrame ) {
 	unsigned int iVal = atoi(pszFrame);
 	clearLCD(LCD);
 	sendStringToLCD(LCD, "Set L to: ");
 	sendIntToLCD(LCD, iVal);
-	TCC0.CCA = iVal;
+	setSpeedL(iVal);
 }
 
-void setSpeedR( char *pszFrame ) {
+void csetSpeedR( char *pszFrame ) {
 	//setLCDCursor(LCD, LCD->config.lineLength);
 	//sendStringToLCD(LCD, pszFrame);
 	unsigned int iVal = atoi(pszFrame);
 	clearLCD(LCD);
 	sendStringToLCD(LCD, "Set R to: ");
 	sendIntToLCD(LCD, iVal);
-	TCC0.CCB = iVal;
+	setSpeedR(iVal);
 }
 
-void setDirL( char *pszFrame ) {
+void csetDirL( char *pszFrame ) {
 	//setLCDCursor(LCD, LCD->config.lineLength);
 	//sendStringToLCD(LCD, pszFrame);
+
+	clearLCD(LCD);
+	if(strcmp(pszFrame,"F") == 0) {
+		setDirL(1);
+		sendStringToLCD(LCD, "Set L to fwd");
+	} else if(strcmp(pszFrame,"R") == 0) {
+		setDirL(-1);
+		sendStringToLCD(LCD, "Set L to rev");
+	} else {
+		sendStringToLCD(LCD, "Could not understand Ldir");
+	}
+
+}
+
+void csetDirR( char *pszFrame ) {
+	//setLCDCursor(LCD, LCD->config.lineLength);
+	//sendStringToLCD(LCD, pszFrame);
+
+	clearLCD(LCD);
+	if(strcmp(pszFrame,"F") == 0) {
+		setDirR(1);
+		sendStringToLCD(LCD, "Set R to fwd");
+	} else if(strcmp(pszFrame,"R") == 0) {
+		setDirR(-1);
+		sendStringToLCD(LCD, "Set R to rev");
+	} else {
+		sendStringToLCD(LCD, "Could not understand Rdir");
+	}
+
+}
+
+void setSpeedL( unsigned int speed ){
+	TCC0.CCA = max(min(speed, motors.max), motors.min);
+}
+void setSpeedR( unsigned int speed ){
+	TCC0.CCB = max(min(speed, motors.max), motors.min);
+}
+void setDirL( int dir ){
 	int prevSpeed = TCC0_CCA;
 	if(prevSpeed != 0 ){
 		TCC0_CCA = 0;
 		_delay_ms(200);
 	}
 
-	clearLCD(LCD);
-	if(strcmp(pszFrame,"F") == 0) {
+	if( dir > 0 )
 		PORTB_OUT = (PORTB_OUT & 0xFC) | PIN0_bm;
-		sendStringToLCD(LCD, "Set L to fwd");
-	} else if(strcmp(pszFrame,"R") == 0) {
+	else if(dir < 0)
 		PORTB_OUT = (PORTB_OUT & 0xFC) | PIN1_bm;
-		sendStringToLCD(LCD, "Set L to rev");
-	} else {
-		sendStringToLCD(LCD, "Could not understand Ldir");
-	}
-	if(prevSpeed != 0 && TCC0_CCA == 0)
-		TCC0_CCA = prevSpeed;
-}
 
-void setDirR( char *pszFrame ) {
-	//setLCDCursor(LCD, LCD->config.lineLength);
-	//sendStringToLCD(LCD, pszFrame);
+	if(prevSpeed != 0 && TCC0_CCA == 0)
+			TCC0_CCA = prevSpeed;
+}
+void setDirR( int dir ){
 	int prevSpeed = TCC0_CCB;
 	if(prevSpeed != 0 ){
 		TCC0_CCB = 0;
 		_delay_ms(200);
 	}
-
-	clearLCD(LCD);
-	if(strcmp(pszFrame,"F") == 0) {
+	if( dir > 0)
 		PORTB_OUT = (PORTB_OUT & 0xF3) | PIN2_bm;
-		sendStringToLCD(LCD, "Set R to fwd");
-	} else if(strcmp(pszFrame,"R") == 0) {
+	else if(dir < 0)
 		PORTB_OUT = (PORTB_OUT & 0xF3) | PIN3_bm;
-		sendStringToLCD(LCD, "Set R to rev");
-	} else {
-		sendStringToLCD(LCD, "Could not understand Rdir");
-	}
+
 	if(prevSpeed != 0 && TCC0_CCB == 0)
 			TCC0_CCB = prevSpeed;
+
 }
 
+void setSpeed(unsigned int speed) {
+	//setSpeedL(speed);
+	//setSpeedR(speed);
+	speed = min(speed, motors.max);
+	if(speed < 1100 ) speed = 0;
+	TCC0.CCA = speed;
+	TCC0.CCB = speed;
+}
+
+void setDir( int dir ) {
+	setDirL(dir);
+	setDirR(dir);
+}
+int oldx = 0;
 SRCALLBACK(readCircle) {
+
+	//X is left/right
+	//Y is near/far
 	char *pTok = strtok(pszFrame, ",");
 	if(pTok == NULL) return;
 	int x = atoi(pTok);
 	pTok = strtok(NULL, ",");
 	if(pTok == NULL) return;
 	int y = atoi(pTok);
+
 	clearLCD(LCD);
-	sendStringToLCD(LCD, "Circle at: {");
+	sendStringToLCD(LCD, "Circle: {");
 	sendIntToLCD(LCD, x);
 	sendCharToLCD(LCD, ',');
 	sendIntToLCD(LCD, y);
 	sendCharToLCD(LCD, '}');
+	int dir = 0;
+	if(x > 305)
+		dir = 1; //object is offset right
+	else
+		dir = -1; //object is offset left
+	if(y > 280)
+		brush(1);
+	else
+		brush(0);
+	oldx=x;
+	float scale = ((float)(0.75+0.25*(abs(100+(float)y)/350.0)) * ((float)(abs(310.0-(float)x)/330.0)))*100.0;
+
+	int mag = dir *
+			abs( (int) ( ( 8000.0 * scale)/100.0));
+	sendStringToLCD(LCD, " M");
+		sendIntToLCD(LCD, mag);
+	if(mag > 2200)
+		//if(abs(oldx - x) < 10) {
+			//return;
+//		}
+		turn(mag, 400);
+	else {
+		setDir(1);
+		advance(mag, 500-y);
+	}
+
 }
 
 
@@ -316,4 +387,43 @@ void ServoCInit(void)
 	TCC0_CCD = 0;					//PWMC3 off
 	TCC1_CCA = 0;					//PWMC4 off
 	TCC1_CCB = 0;					//PWMC5 off
+}
+
+void turn(int magnitude, unsigned int duration) {
+	unsigned int halfMag = (int)(abs(magnitude)/2.0);
+	if(magnitude > 0) {
+		//turn right
+		setDirR(-1);
+		setDirL(1);
+
+	} else {
+		//turn left
+		setDirR(1);
+		setDirL(-1);
+
+	}
+	sendStringToLCD(LCD, " M");
+	sendIntToLCD(LCD, halfMag);
+	setSpeed(halfMag);
+	if(duration != 0) {
+		_delay_ms(duration);
+		setSpeed(0);
+	}
+}
+
+void advance(int magnitude, unsigned int duration) {
+	setSpeed(magnitude);
+	if(duration != 0){
+		_delay_ms(duration);
+		setSpeed(0);
+	}
+
+}
+
+
+void brush(unsigned onoff){
+	if(onoff == 1)
+		PORTB_OUT |= PIN4_bm;
+	else
+		PORTB_OUT &= 0xEF;
 }
