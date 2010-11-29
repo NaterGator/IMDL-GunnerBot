@@ -1,6 +1,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "usart.h"
+#include <string.h>
+#include <stdlib.h>
 
 void initUsart( struct USARTconfig *conf) {
 	cli();
@@ -25,7 +27,27 @@ void initUsart( struct USARTconfig *conf) {
 
 	conf->USARTmap->CTRLB	|= USART_RXEN_bm | USART_TXEN_bm;
 	conf->USARTmap->CTRLA	|= USART_RXCINTLVL_MED_gc;
-	PMIC_CTRL |= PMIC_MEDLVLEN_bm;
+
+	PMIC_CTRL |= PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm;
 	sei();
 }
 
+void enableTxInt( struct USARTconfig *conf){
+	conf->USARTmap->CTRLA	|= USART_DREINTLVL_LO_gc;
+}
+void disableTxInt( struct USARTconfig *conf){
+	conf->USARTmap->CTRLA	&= ~USART_DREINTLVL_gm;
+
+}
+
+extern void writeData( struct USARTconfig *conf,  char *dataIn) {
+	/*if( conf->pszDataOut != NULL ){
+		conf->pszDataOut = realloc( conf->pszDataOut, strlen(conf->pszDataOut) + strlen(dataIn) + 1);
+		strcat(conf->pszDataOut, dataIn);
+	} else {*/
+		conf->pszDataOut = dataIn;
+//		conf->USARTmap->DATA = *(dataIn++);
+	//}
+
+	enableTxInt(conf);
+}

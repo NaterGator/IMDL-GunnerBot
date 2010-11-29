@@ -12,9 +12,14 @@
 struct USARTconfig {
 	USART_t* 	USARTmap;
 	PORT_t*		PORTmap;
+	char *pszDataOut;
 	struct USARTconfig* this;
 };
 
 extern void initUsart(struct USARTconfig *conf);
+extern void enableTxInt( struct USARTconfig *conf);
+extern void disableTxInt( struct USARTconfig *conf);
+extern void writeData( struct USARTconfig *conf,  char *dataIn);
+
 
 #endif /* USART_H_ */

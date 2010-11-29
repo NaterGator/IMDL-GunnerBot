@@ -37,6 +37,8 @@ struct hsvLimits {
 	    	int *morphc;
 	    	int *canny;
 	    	int *accum;
+	    	int *gauss;
+	    	int *sigma;
 	    	Mat *temp;
 };
 
@@ -60,7 +62,7 @@ void updateImages( int i, void *plimits )
 		morphologyEx(mask, mask, MORPH_OPEN, getStructuringElement(MORPH_RECT, Size(*(limits->morpho),*(limits->morpho))));
 		imshow("hough", mask);
 
-		GaussianBlur(mask, mask, Size(9, 9), 2, 2 );
+		GaussianBlur(mask, mask, Size(*(limits->gauss)*2+1, *(limits->gauss)*2+1), *(limits->sigma), *(limits->sigma) );
 		imshow("hough", mask);
 
 		vector<Vec3f> circles;
@@ -93,7 +95,7 @@ int main() {
 	stringstream imgData (stringstream::in | stringstream::out | stringstream::binary);
 
 		struct sockaddr_rc loc_addr = { 0 }, rem_addr = { 0 };
-		uint16_t w = 640;
+		uint16_t w = 848;
 		uint16_t h = 480;
 
 
@@ -133,6 +135,8 @@ int main() {
 	    int *morphc = new int;
 	    int *canny = new int;
 	    int *accum = new int;
+	    int *gauss = new int;
+	    int *sigma = new int;
 	    *hmin=48;//(int) (0.1425*180);
 	    *hmax=93;//(int) (0.31*180);
 	    *lmin=94;//(int) (0.12*256);
@@ -143,8 +147,10 @@ int main() {
 	    *morphc = 3;
 	    *canny = 225;
 	    *accum = 50;
+	    *gauss = 4;
+	    *sigma = 2;
 
-	    struct hsvLimits limits = { hmin, hmax, lmin, lmax, smin, smax, morpho, morphc, canny, accum, temp };
+	    struct hsvLimits limits = { hmin, hmax, lmin, lmax, smin, smax, morpho, morphc, canny, accum, gauss, sigma, temp };
 
 		namedWindow("controls");
 		namedWindow("fullimg");
@@ -159,6 +165,8 @@ int main() {
 		createTrackbar("morphclose", "controls", morphc, 20, updateImages, (void *) &limits);
 		createTrackbar("canny", "controls", canny, 300, updateImages, (void *) &limits);
 		createTrackbar("accum", "controls", accum, 300, updateImages, (void *) &limits);
+		createTrackbar("gaussian", "controls", gauss, 30, updateImages, (void *) &limits);
+		createTrackbar("sigma", "controls", sigma, 30, updateImages, (void *) &limits);
 
 	    while(true) {
 	    	switch(state) {
@@ -265,7 +273,7 @@ int main() {
 						imshow("hough", mask);
 						waitKey();
 						fprintf(stderr, " Applying gauss blur.\n");
-						GaussianBlur(mask, mask, Size(9, 9), 2, 2 );
+						GaussianBlur(mask, mask, Size((*gauss)*2+1, (*gauss)*2+1), *sigma, *sigma );
 						imshow("hough", mask);
 						waitKey();
 						vector<Vec3f> circles;

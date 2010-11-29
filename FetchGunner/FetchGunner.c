@@ -11,27 +11,22 @@
  *
  */
 
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <util/delay_x.h>
-#include <lcdiface.h>
-#include <usart.h>
-#include <serialstream.h>
-#include <string.h>
-#include <stdlib.h>
 #include "FetchGunner.h"
+#define SRCALLBACK(name) void name(char *pszFrame)
 
-struct motorData motors = {9000, 1700};
 
 int main(void) {
+	motors.max = 9000;
+	motors.min = 800;
+
 
 	initXmega();
 	ADCAInit();
 	ServoCInit();
+	initTCF0();
 
-
-
-	struct FGoperator botState = {0};
+	botState.mode = MODE_SEEKING;
+	botState.phoneLooking = false;
 
 
 	/*
@@ -40,6 +35,7 @@ int main(void) {
 	struct LCDinfo avrLCD = {0};
 	struct LCDconfig twoLines = {0};
 	avrLCD.this = &avrLCD;
+
 	LCD = &avrLCD;
 
 
@@ -64,8 +60,11 @@ int main(void) {
 
 
 
-	//Set PORTB for use with motor controllers
+	//Set PORTB for use with motor controllers and bluetooth monitoring
+	ADCB_CTRLA = 0x0;
 	PORTB.DIRSET = PIN0_bm | PIN1_bm | PIN2_bm | PIN3_bm | PIN4_bm;
+	PORTB_INTCTRL = PORT_INT0LVL_MED_gc;
+	PORTB_INT0MASK = PIN5_bm;
 
 	//PORTQ debug light, used to notify of a USART buffer overrun
 	PORTQ.DIRSET = 1;
@@ -91,6 +90,9 @@ int main(void) {
 	//BlueSMiRF is connected to PORTE
 	smirfSart.USARTmap = &USARTE1;
 	smirfSart.PORTmap = &PORTE;
+	smirfSart.this = &smirfSart;
+	USARTE = &smirfSart;
+
 	initUsart( smirfSart.this );
 	/*
 	 * Serialstream/Bluetooth USART initialization complete.
@@ -106,12 +108,18 @@ int main(void) {
 	serialstreamAddCallbackPair( blueSmirfStream, "dirL", &csetDirL );
 	serialstreamAddCallbackPair( blueSmirfStream, "dirR", &csetDirR );
 	serialstreamAddCallbackPair( blueSmirfStream, "cir", &readCircle );
+	serialstreamAddCallbackPair( blueSmirfStream, "tm", &timeMotor );
+	serialstreamAddCallbackPair( blueSmirfStream, "move", &move );
+	serialstreamAddCallbackPair( blueSmirfStream, "td", &cturnD );
 
 
 	NEW_SMOOTH(ADCAsmoother, 20);
 	NEW_SMOOTH(SonarASmooth, 15);
 	initPWMread();
+
+
 	while(1){
+
 		//Act on any queued packets from bluetooth
 		runSerialStreamCallbackQueue(&bluetoothData);
 /*
@@ -133,16 +141,45 @@ int main(void) {
 		}*/
 
 		switch(botState.mode) {
-			case MODE_PICKUP:
+			case MODE_SEEKING:
 				if(botState.phoneLooking == false) {
 					//Instruct phone to look for the ball
 					//TODO: Implement this!
+					if(botState.bluetoothState == false) {
+						clearLCD(LCD);
+						sendStringToLCD(LCD, "bluetooth disconnected");
+						_delay_ms(3000);
+						continue;
+					}
+					botState.phoneLooking = true;
+					writeData(smirfSart.this, "$FSTART$getImg$FEND$ ");
+					botState.lookingCount = 0;
+					clearLCD(LCD);
+					sendStringToLCD(LCD, "Running look mode");
+					runTCF0(&idleCamera, TURN_DELAY);
 					continue;
-				}
+				} /*else {
+					if(botState.lookingCount == 24) {
+						clearLCD(LCD);
+						sendStringToLCD(LCD, "Ball not found.");
+						botState.mode = MODE_WAITING;
+					}
+					_delay_ms(5000);
+					if(botState.phoneLooking == true){
+						turnD(30);
+						botState.lookingCount++;
+					}
+
+				}*/
 
 
 
 				break;
+			case MODE_PICKUP:
+				if(botState.phoneLooking == false) {
+					botState.phoneLooking = true;
+					writeData(smirfSart.this, "$FSTART$getImg$FEND$ ");
+				}
 			case MODE_LAUNCHING:
 				break;
 			case MODE_WAITING:
@@ -156,6 +193,13 @@ int main(void) {
 }
 
 void initXmega( void ) {
+	uint8_t volatile saved_sreg = SREG;
+	cli();
+
+	//Disable JTAG so the rest of PORTB can be used.
+	CCP = 0xD8;
+	MCU_MCUCR = MCU_JTAGD_bm;
+
 	CCP = 0xD8;
 	CLK_PSCTRL = 0x00;
 	//setup oscilllator
@@ -163,6 +207,8 @@ void initXmega( void ) {
 	while ((OSC_STATUS & 0x02) == 0);		//wait for oscillator to be ready
 	CCP = 0xD8;								//write signature to CCP
 	CLK_CTRL = 0x01;
+
+	SREG = saved_sreg;
 }
 
 ISR( USARTE1_RXC_vect ){
@@ -201,6 +247,7 @@ void initPWMread(void) {
 }
 
 
+
 unsigned int ADCA0(void)
 {
 	ADCA_CH0_MUXCTRL = 0x00;		//Set to Pin 0
@@ -221,119 +268,41 @@ unsigned int adcSmooth(struct adcSmooth_struct *smoother, unsigned int iNewVal) 
 	return smoother->avg;
 }
 
-void csetSpeedL( char *pszFrame ) {
-	unsigned int iVal = atoi(pszFrame);
-	clearLCD(LCD);
-	sendStringToLCD(LCD, "Set L to: ");
-	sendIntToLCD(LCD, iVal);
-	setSpeedL(iVal);
-}
 
-void csetSpeedR( char *pszFrame ) {
-	//setLCDCursor(LCD, LCD->config.lineLength);
-	//sendStringToLCD(LCD, pszFrame);
-	unsigned int iVal = atoi(pszFrame);
-	clearLCD(LCD);
-	sendStringToLCD(LCD, "Set R to: ");
-	sendIntToLCD(LCD, iVal);
-	setSpeedR(iVal);
-}
+SRCALLBACK(timeMotor) {
+	char *pTok = strtok(pszFrame, ",");
+	if(pTok == NULL) return;
+	int speedl = atoi(pTok);
+	pTok = strtok(NULL, ",");
+	if(pTok == NULL) return;
+	int speedr = atoi(pTok);
+	pTok = strtok(NULL, ",");
+	if(pTok == NULL) return;
+	int time = atoi(pTok);
 
-void csetDirL( char *pszFrame ) {
-	//setLCDCursor(LCD, LCD->config.lineLength);
-	//sendStringToLCD(LCD, pszFrame);
-
-	clearLCD(LCD);
-	if(strcmp(pszFrame,"F") == 0) {
-		setDirL(1);
-		sendStringToLCD(LCD, "Set L to fwd");
-	} else if(strcmp(pszFrame,"R") == 0) {
-		setDirL(-1);
-		sendStringToLCD(LCD, "Set L to rev");
-	} else {
-		sendStringToLCD(LCD, "Could not understand Ldir");
-	}
+	advance(speedl, speedr, time);
 
 }
 
-void csetDirR( char *pszFrame ) {
-	//setLCDCursor(LCD, LCD->config.lineLength);
-	//sendStringToLCD(LCD, pszFrame);
-
-	clearLCD(LCD);
-	if(strcmp(pszFrame,"F") == 0) {
-		setDirR(1);
-		sendStringToLCD(LCD, "Set R to fwd");
-	} else if(strcmp(pszFrame,"R") == 0) {
-		setDirR(-1);
-		sendStringToLCD(LCD, "Set R to rev");
-	} else {
-		sendStringToLCD(LCD, "Could not understand Rdir");
-	}
-
-}
-
-void setSpeedL( unsigned int speed ){
-	TCC0.CCA = max(min(speed, motors.max), motors.min);
-}
-void setSpeedR( unsigned int speed ){
-	TCC0.CCB = max(min(speed, motors.max), motors.min);
-}
-void setDirL( int dir ){
-	int prevSpeed = TCC0_CCA;
-	if(prevSpeed != 0 ){
-		TCC0_CCA = 0;
-		_delay_ms(200);
-	}
-
-	if( dir > 0 )
-		PORTB_OUT = (PORTB_OUT & 0xFC) | PIN0_bm;
-	else if(dir < 0)
-		PORTB_OUT = (PORTB_OUT & 0xFC) | PIN1_bm;
-
-	if(prevSpeed != 0 && TCC0_CCA == 0)
-			TCC0_CCA = prevSpeed;
-}
-void setDirR( int dir ){
-	int prevSpeed = TCC0_CCB;
-	if(prevSpeed != 0 ){
-		TCC0_CCB = 0;
-		_delay_ms(200);
-	}
-	if( dir > 0)
-		PORTB_OUT = (PORTB_OUT & 0xF3) | PIN2_bm;
-	else if(dir < 0)
-		PORTB_OUT = (PORTB_OUT & 0xF3) | PIN3_bm;
-
-	if(prevSpeed != 0 && TCC0_CCB == 0)
-			TCC0_CCB = prevSpeed;
-
-}
-
-void setSpeed(unsigned int speed) {
-	//setSpeedL(speed);
-	//setSpeedR(speed);
-	speed = min(speed, motors.max);
-	if(speed < 1100 ) speed = 0;
-	TCC0.CCA = speed;
-	TCC0.CCB = speed;
-}
-
-void setDir( int dir ) {
-	setDirL(dir);
-	setDirR(dir);
-}
-int oldx = 0;
 SRCALLBACK(readCircle) {
 
 	//X is left/right
 	//Y is near/far
+	pauseTCF0();
+	botState.mode = MODE_PICKUP;
 	char *pTok = strtok(pszFrame, ",");
 	if(pTok == NULL) return;
 	int x = atoi(pTok);
 	pTok = strtok(NULL, ",");
 	if(pTok == NULL) return;
 	int y = atoi(pTok);
+	pTok = strtok(NULL, ",");
+	if(pTok == NULL) return;
+	int angle = atoi(pTok);
+	if(y > 320)
+		brush(1);
+	else
+		brush(0);
 
 	clearLCD(LCD);
 	sendStringToLCD(LCD, "Circle: {");
@@ -341,31 +310,24 @@ SRCALLBACK(readCircle) {
 	sendCharToLCD(LCD, ',');
 	sendIntToLCD(LCD, y);
 	sendCharToLCD(LCD, '}');
-	int dir = 0;
-	if(x > 305)
-		dir = 1; //object is offset right
-	else
-		dir = -1; //object is offset left
-	if(y > 280)
-		brush(1);
-	else
-		brush(0);
-	oldx=x;
-	float scale = ((float)(0.75+0.25*(abs(100+(float)y)/350.0)) * ((float)(abs(310.0-(float)x)/330.0)))*100.0;
+	setLCDCursor(LCD, LCD->config.lineLength);
+	sendStringToLCD(LCD, "Angle: ");
+	sendIntToLCD(LCD, angle);
+	if(abs(angle) > 1 ) {
+		turnD(angle);
 
-	int mag = dir *
-			abs( (int) ( ( 8000.0 * scale)/100.0));
-	sendStringToLCD(LCD, " M");
-		sendIntToLCD(LCD, mag);
-	if(mag > 2200)
-		//if(abs(oldx - x) < 10) {
-			//return;
-//		}
-		turn(mag, 400);
-	else {
-		setDir(1);
-		advance(mag, 500-y);
+		botState.phoneLooking = false;
+		return;
 	}
+
+	setDir(1);
+	//advance(8000, 8000, 500-y);
+	brush(1);
+	moveTo(0, y);
+	_delay_ms(2500);
+	brush(0);
+	botState.phoneLooking = false;
+	return;
 
 }
 
@@ -411,8 +373,10 @@ void turn(int magnitude, unsigned int duration) {
 	}
 }
 
-void advance(int magnitude, unsigned int duration) {
-	setSpeed(magnitude);
+void advance(int l, int r, unsigned int duration) {
+	//setSpeed(magnitude);
+	setSpeedL(l);
+	setSpeedR(r);
 	if(duration != 0){
 		_delay_ms(duration);
 		setSpeed(0);
@@ -425,5 +389,110 @@ void brush(unsigned onoff){
 	if(onoff == 1)
 		PORTB_OUT |= PIN4_bm;
 	else
-		PORTB_OUT &= 0xEF;
+		PORTB_OUT &= ~PIN4_bm;
+}
+
+void moveTo( int x, int y){
+	const unsigned int pwm = 5000;
+	// lead biasing
+	// inches per second = 6.5352431 ln( pwm speed ) - 40.6344299
+	double speed = 6.185 * log( (double) pwm ) - 41.635;
+	clearLCD(LCD);
+	sendStringToLCD(LCD, "di: ");
+	double distance = 8.5595812*pow(1.0048532,((double) abs(480-y)));
+	sendIntToLCD(LCD, (int) distance);
+	double duration = 1000*(distance)/speed; //duration in seconds
+
+/*	//turn biasing
+	// pwm speed = 516.206014*1.162575^inches offset
+	double turnpwm = 0;
+	if(x != 0)
+		turnpwm = 516.206014 * pow(1.162575,abs(x)/(duration/1000));
+
+	turnpwm /= 2;
+	int l = (x < 0?-1:1)*turnpwm + pwm ;
+	int r = (x < 0?1:-1)*turnpwm + pwm ;
+	//clearLCD(LCD);*/
+	sendStringToLCD(LCD, "du: ");
+	sendIntToLCD(LCD, (int) duration);
+	setLCDCursor(LCD, LCD->config.lineLength);
+
+	advance( pwm+1620, pwm-1620, ((unsigned int) duration));
+
+}
+
+void turnD(int degrees) {
+	const unsigned int pwm = 5000;
+	// angular velocity calculation
+	// degrees per second = 35.710404 ln(x) - 192.689120
+	double aVel = 35.710404*log((double) pwm) - 192.689120;
+	unsigned int duration = 1100*((double) abs(degrees))/aVel;
+	//at the high end of pwm speed angle is off with longer spins (about 20 degs at 360 rotation)
+
+	//fudgefactor is inversely proportional to set speed.
+	//unsigned int fudgeFactor = (9000-pwm)/9000;
+	unsigned oldDL = getDirL();
+	unsigned oldDR = getDirR();
+
+	setDirL(degrees < 0?-1:1);
+	setDirR(degrees < 0?1:-1);
+	setSpeed(pwm);
+
+	_delay_ms(duration);
+	setSpeed(0);
+
+	setDirL(oldDL);
+	setDirR(oldDR);
+	return;
+
+}
+
+
+SRCALLBACK(move) {
+	char *pTok = strtok(pszFrame, ",");
+	if(pTok == NULL) return;
+	int x = atoi(pTok);
+	pTok = strtok(NULL, ",");
+	if(pTok == NULL) return;
+	int y = atoi(pTok);
+
+	moveTo(x, y);
+
+
+}
+
+SRCALLBACK(cturnD) {
+	int deg = atoi(pszFrame);
+	turnD(deg);
+}
+
+
+void sendPendingChar(struct USARTconfig* conf){
+	if(conf->pszDataOut != NULL) {
+		if(*(conf->pszDataOut)){
+			conf->USARTmap->DATA = *(conf->pszDataOut++);
+		}else
+			conf->pszDataOut = NULL;
+	} else
+		disableTxInt(conf);
+
+	return;
+}
+
+
+
+
+
+ISR( USARTE1_DRE_vect ) {
+//	sendStringToLCD(LCD, "Inside DRE.");
+	PORTQ.OUT = 1 & (PORTQ.OUT ^ 1);
+	sendPendingChar(USARTE);
+}
+
+ISR( PORTB_INT0_vect ){
+	botState.bluetoothState = PORTB_IN & PIN5_bm;
+	clearLCD(LCD);
+	sendStringToLCD(LCD, "bluetoothState change: ");
+	sendIntToLCD(LCD, botState.bluetoothState);
+	return;
 }

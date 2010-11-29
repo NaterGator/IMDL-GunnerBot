@@ -48,7 +48,7 @@ public class opencvTuner extends Activity {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		requestWindowFeature(Window.FEATURE_NO_TITLE);
-		
+		getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN, android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
 		mPreview = new Preview( this );
 		
 		setContentView(mPreview);
@@ -293,7 +293,8 @@ class Preview extends SurfaceView implements SurfaceHolder.Callback {
 
         List<Size> sizes = parameters.getSupportedPreviewSizes();
         Size optimalSize = getOptimalPreviewSize(sizes, w, h);
-        parameters.setPreviewSize(640, 480);
+        parameters.setPreviewSize(optimalSize.width, optimalSize.height);
+        //parameters.setPreviewSize(640, 480);
         //parameters.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_INCANDESCENT);
         parameters.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_AUTO);
         Size cSize = parameters.getPreviewSize();

@@ -52,6 +52,7 @@
 </option>
 <option id="de.innot.avreclipse.linker.option.libs.1785063650" name="Libraries (-l)" superClass="de.innot.avreclipse.linker.option.libs" valueType="libs">
 <listOptionValue builtIn="false" value="lcdiface"/>
+<listOptionValue builtIn="false" value="m"/>
 <listOptionValue builtIn="false" value="serialstream"/>
 <listOptionValue builtIn="false" value="usart"/>
 </option>

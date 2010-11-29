@@ -58,6 +58,8 @@ struct serialstream_struct {
 int serialstreamAddCallbackPair( struct serialstream_struct *ss, const char * tag, void (*datacallback)(char *));
 extern int serialStreamProcessChar( struct serialstream_struct *ss );
 extern void runSerialStreamCallbackQueue( struct serialstream_struct *ss );
+extern void sendData(struct serialstream_struct *ss, char *pszData);
+
 
 #define SRCALLBACK(name) void name(char *pszFrame)
 
