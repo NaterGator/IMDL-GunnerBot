@@ -61,10 +61,16 @@ void csetDirR( char *pszFrame ) {
 }
 
 void setSpeedL( unsigned int speed ){
-	TCC0.CCA = max(min(speed, motors.max), motors.min);
+	if(speed == 0)
+		TCC0_CCA = 0;
+	else
+		TCC0_CCA = max(min(speed, motors.max), motors.min);
 }
 void setSpeedR( unsigned int speed ){
-	TCC0.CCB = max(min(speed, motors.max), motors.min);
+	if(speed == 0)
+		TCC0_CCB = 0;
+	else
+		TCC0_CCB = max(min(speed, motors.max), motors.min);
 }
 
 unsigned getDirL() {
@@ -116,4 +122,31 @@ void setSpeed(unsigned int speed) {
 void setDir( int dir ) {
 	setDirL(dir);
 	setDirR(dir);
+}
+
+
+void brush(unsigned onoff){
+	if(onoff == 1)
+		PORTB_OUT |= PIN4_bm;
+	else
+		PORTB_OUT &= ~PIN4_bm;
+}
+
+void evasiveTurn( int dir ) {
+	setSpeed(0);
+	_delay_ms(10);
+	unsigned dirL = getDirL();
+	unsigned dirR = getDirR();
+	setDirL((dir<0?-1:1));
+	setDirR((dir<0?1:-1));
+	setSpeed(EVASIVE_SPEED);
+	_delay_ms(EVASIVE_TURN_DURATION);
+	setSpeed(0);
+	_delay_ms(30);
+	setDir(1);
+	setSpeed(EVASIVE_SPEED);
+	_delay_ms(700);
+	setSpeed(0);
+	setDirL(dirL);
+	setDirR(dirR);
 }

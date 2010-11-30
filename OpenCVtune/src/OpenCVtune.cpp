@@ -139,16 +139,16 @@ int main() {
 	    int *sigma = new int;
 	    *hmin=48;//(int) (0.1425*180);
 	    *hmax=93;//(int) (0.31*180);
-	    *lmin=94;//(int) (0.12*256);
-	    *lmax=254;
-	    *smin=87;//(int) (0.48*256);
+	    *lmin=95;//(int) (0.12*256);
+	    *lmax=250;
+	    *smin=57;//87;//(int) (0.48*256);
 	    *smax=256;
 	    *morpho = 10;
 	    *morphc = 3;
 	    *canny = 225;
 	    *accum = 50;
 	    *gauss = 4;
-	    *sigma = 2;
+	    *sigma = 5;
 
 	    struct hsvLimits limits = { hmin, hmax, lmin, lmax, smin, smax, morpho, morphc, canny, accum, gauss, sigma, temp };
 

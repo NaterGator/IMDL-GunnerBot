@@ -28,7 +28,20 @@
 #define MODE_PICKUP 2
 #define MODE_LAUNCHING 3
 
+#define MOVE_STILL 0
+#define MOVE_TURNLEFT 1
+#define MOVE_TURNRIGHT 2
+#define MOVE_FORWARD 3
+
+#define SONF TCD0_CCA
+#define SONR TCD0_CCB
+#define SONL TCD0_CCC
+
 #define TURN_DELAY 5000
+#define SONAR_TIMEOUT 50
+#define EVASIVE_SPEED 3000
+#define EVASIVE_TURN_DURATION 700
+#define EVASIVE_REV_DURATION 300
 
 
 struct adcSmooth_struct {
@@ -40,7 +53,11 @@ struct adcSmooth_struct {
 
 struct isrFuncPtrs {
 	void (*TCF0_CCA_PTR)( );
+	void (*TCF1_CCA_PTR)( );
 	unsigned int TCF0_milliloops;
+	unsigned int TCF1_milliloops;
+	unsigned int TCF0_millis;
+	unsigned int TCF1_millis;
 } isrPtrs;
 
 struct motorData {
@@ -55,6 +72,8 @@ struct FGoperator {
 	bool phoneLooking;
 	unsigned int lookingCount;
 	bool bluetoothState;
+	bool launcherOn;
+	unsigned movement;
 } botState;
 
 
@@ -91,12 +110,20 @@ void moveTo(int x, int y);
 SRCALLBACK(move);
 
 void turnD(int degrees);
+void evasiveTurn( int dir );
+
 SRCALLBACK(cturnD);
 void sendPendingChar(struct USARTconfig* conf);
 
 struct LCDinfo* LCD;
 struct USARTconfig* USARTE;
 struct serialstream_struct *blueSmirfStream;
+
+
+struct adcSmooth_struct *Sonar0;
+struct adcSmooth_struct *Sonar1;
+struct adcSmooth_struct *Sonar2;
+unsigned int count;
 //struct motorData motors;
 
 
