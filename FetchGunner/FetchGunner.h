@@ -51,6 +51,12 @@ struct adcSmooth_struct {
 	unsigned int avg;
 };
 
+struct sonarValStruct {
+	unsigned int f;
+	unsigned int l;
+	unsigned int r;
+} sonarVals;
+
 struct isrFuncPtrs {
 	void (*TCF0_CCA_PTR)( );
 	void (*TCF1_CCA_PTR)( );
@@ -80,6 +86,13 @@ struct FGoperator {
 #define NEW_SMOOTH(name, depth) struct adcSmooth_struct  name = { calloc(depth, sizeof(int)), depth, 0, 0};
 #define min(X,Y) (((X) < (Y)) ?  (X) : (Y))
 #define max(X,Y) (((X) > (Y)) ?  (X) : (Y))
+#define enableSonar() 	TCD0_INTCTRLB |= TC_CCAINTLVL_LO_gc | TC_CCBINTLVL_LO_gc | TC_CCCINTLVL_LO_gc
+#define disableSonar()	TCD0_INTCTRLB &= TC_CCAINTLVL_OFF_gc | TC_CCBINTLVL_OFF_gc | TC_CCCINTLVL_OFF_gc;
+#define enableTBDetect() ADCA_CH0_INTCTRL |= ADC_CH_INTLVL_LO_gc;
+#define disableTBDetect() ADCA_CH0_INTCTRL &= ~ADC_CH_INTLVL_LO_gc;
+
+#define ARM_HOLD 1020
+#define ARM_RELEASE 700
 
 void ADCAInit(void);
 void csetSpeedL( char *pszFrame );
@@ -99,6 +112,7 @@ SRCALLBACK(readCircle);
 void initXmega( void );
 void initPWMread(void);
 
+
 void turn(int magnitude, unsigned int duration);
 void advance(int l, int r, unsigned int duration);
 unsigned int ADCA0(void);
@@ -113,6 +127,8 @@ void turnD(int degrees);
 void evasiveTurn( int dir );
 
 SRCALLBACK(cturnD);
+SRCALLBACK(csetHolder);
+void setHolder(unsigned int position);
 void sendPendingChar(struct USARTconfig* conf);
 
 struct LCDinfo* LCD;
@@ -124,6 +140,8 @@ struct adcSmooth_struct *Sonar0;
 struct adcSmooth_struct *Sonar1;
 struct adcSmooth_struct *Sonar2;
 unsigned int count;
+unsigned int count2;
+
 //struct motorData motors;
 
 

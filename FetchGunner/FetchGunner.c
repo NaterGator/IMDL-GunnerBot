@@ -19,13 +19,25 @@ int main(void) {
 	motors.max = 9000;
 	motors.min = 800;
 
-
 	initXmega();
-	ADCAInit();
+
 	ServoCInit();
+	setHolder(ARM_HOLD);
 	initTCF0();
 	initTCF1();
 //	runTCF1(&sensorWatch, 50);
+
+
+	//PORTQ debug light, used to notify of a USART buffer overrun
+	PORTQ_DIRSET |= PIN0_bm | PIN1_bm;
+	PORTQ_OUTCLR |= PIN0_bm | PIN1_bm;
+	_delay_ms(500);
+
+	PORTQ_OUTSET |= PIN0_bm | PIN1_bm;
+	_delay_us(40);
+	PORTQ_DIRCLR |= PIN1_bm;
+	PORTQ_OUTCLR |= PIN0_bm | PIN1_bm;
+
 
 	botState.mode = MODE_SEEKING;
 	botState.phoneLooking = false;
@@ -60,7 +72,7 @@ int main(void) {
 	 */
 
 
-
+	ADCAInit();
 
 	//Set PORTB for use with motor controllers and bluetooth monitoring
 	ADCB_CTRLA = 0x0;
@@ -68,13 +80,6 @@ int main(void) {
 	PORTB_INTCTRL = PORT_INT0LVL_MED_gc;
 	PORTB_INT0MASK = PIN5_bm;
 
-	//PORTQ debug light, used to notify of a USART buffer overrun
-	_delay_ms(200);
-	PORTQ_DIRSET |= PIN0_bm | PIN1_bm;
-	PORTQ_OUTSET |= PIN0_bm | PIN1_bm;
-	_delay_us(30);
-	PORTQ_DIRCLR |= PIN1_bm;
-	PORTQ_OUTCLR |= PIN0_bm | PIN1_bm;
 
 
 	/*
@@ -111,6 +116,7 @@ int main(void) {
 	 */
 	serialstreamAddCallbackPair( blueSmirfStream, "setL", &csetSpeedL );
 	serialstreamAddCallbackPair( blueSmirfStream, "setR", &csetSpeedR );
+	serialstreamAddCallbackPair( blueSmirfStream, "setH", &csetHolder );
 	serialstreamAddCallbackPair( blueSmirfStream, "dirL", &csetDirL );
 	serialstreamAddCallbackPair( blueSmirfStream, "dirR", &csetDirR );
 	serialstreamAddCallbackPair( blueSmirfStream, "cir", &readCircle );
@@ -127,7 +133,6 @@ int main(void) {
 	NEW_SMOOTH(Sonar2Smooth, 3);
 	Sonar2 = &Sonar2Smooth;
 	initPWMread();
-
 
 	while(1){
 
@@ -221,6 +226,7 @@ int main(void) {
 				// TODO: Implement a strategy for failing to pick up the ball in an alotted time.
 				//_delay_s(6);
 				//botState.mode = MODE_LAUNCHING;
+				enableTBDetect();
 				break;
 			case MODE_LAUNCHING:
 				clearLCD(LCD);
@@ -232,19 +238,19 @@ int main(void) {
 					_delay_ms(4000);
 				}
 
-
-				// Pull the solenoid down.
-				PORTB_OUT |= PIN7_bm;
-				// Let that tennis ball roll it's sweet self down the pipe
-				_delay_ms(6000);
-				// Turn off the solenoid and motor, quick like
+				setHolder(ARM_RELEASE);
+				_delay_s(5);
+				setHolder(ARM_HOLD);
+				// Turn off the motor
 				PORTB_OUTCLR |= PIN7_bm | PIN6_bm;
 				botState.launcherOn = false;
 
 				botState.mode = MODE_WAITING;
+
 				break;
 			case MODE_WAITING:
 				_delay_s(5);
+				//TODO: revert
 				botState.mode = MODE_SEEKING;
 			default:
 				break;
@@ -271,7 +277,11 @@ void initXmega( void ) {
 	CCP = 0xD8;								//write signature to CCP
 	CLK_CTRL = 0x01;
 
+	PMIC_CTRL |= PMIC_MEDLVLEN_bm | PMIC_LOLVLEN_bm;
+
 	SREG = saved_sreg;
+
+	sei();
 }
 
 ISR( USARTE1_RXC_vect ){
@@ -286,13 +296,18 @@ ISR( USARTE1_RXC_vect ){
 
 void ADCAInit(void)
 {
-
-	ADCA_CTRLB = 0x00;				//12bit, right adjusted
 	ADCA_REFCTRL = 0x10;			//set to Vref = Vcc/1.6 = 2.0V (approx)
-	ADCA_CH0_CTRL = 0x01;			//set to single-ended
-	ADCA_CH0_INTCTRL = 0x00;		//set flag at conversion complete.  Disable interrupt
-	ADCA_CH0_MUXCTRL = 0x08;		//set to Channel 1
+	ADCA_CH0_CTRL = ADC_CH_INPUTMODE_SINGLEENDED_gc;			//set to single-ended
+	ADCA.CMP = 1200;
+	ADCA_CH0_INTCTRL = ADC_CH_INTMODE_BELOW_gc | ADC_CH_INTLVL_OFF_gc;		//set flag at conversion complete.  Disable interrupt
+	ADCA_CH0_MUXCTRL = ADC_CH_MUXPOS_PIN0_gc;
+	cli();
+	ADCA_CTRLB |= ADC_FREERUN_bm;				//12bit, right adjusted
 	ADCA_CTRLA |= 0x01;				//Enable ADCA
+	_delay_ms(1);
+	ADCA_CH0_INTFLAGS |= ADC_CH_CHIF_bm;
+	sei();
+
 }
 
 void initPWMread(void) {
@@ -307,6 +322,7 @@ void initPWMread(void) {
 
 
 	TCD0_CTRLD = TC_EVACT_PW_gc | TC_EVSEL_CH0_gc;
+	TCD0_INTCTRLB |= TC_CCAINTLVL_LO_gc | TC_CCBINTLVL_LO_gc | TC_CCCINTLVL_LO_gc;
 	TCD0_CTRLB = TC0_CCAEN_bm | TC0_CCBEN_bm | TC0_CCCEN_bm;
 	TCD0_CTRLA = TC_CLKSEL_DIV64_gc;
 
@@ -352,6 +368,10 @@ SRCALLBACK(timeMotor) {
 
 SRCALLBACK(readCircle) {
 
+	if( botState.mode == MODE_LAUNCHING ) {
+		botState.phoneLooking = false;
+		return;
+	}
 	//X is left/right
 	//Y is near/far
 	pauseTCF0();
@@ -384,7 +404,7 @@ SRCALLBACK(readCircle) {
 		return;
 	}
 
-	botState.mode = MODE_LAUNCHING;
+	//botState.mode = MODE_LAUNCHING;
 
 	setDir(1);
 	//advance(8000, 8000, 500-y);
@@ -499,8 +519,8 @@ void turnD(int degrees) {
 	unsigned int fSon, lSon, rSon;
 	for(int i=0; i < 4; i++) {
 		fSon = adcSmooth(Sonar0, (unsigned int) (SONF*2)/58);
-		lSon = adcSmooth(Sonar1, (unsigned int) (SONL*2)/58);
-		rSon = adcSmooth(Sonar2, (unsigned int) (SONR*2)/58);
+		lSon = adcSmooth(Sonar2, (unsigned int) (SONL*2)/58);
+		rSon = adcSmooth(Sonar1, (unsigned int) (SONR*2)/58);
 		_delay_ms(150);
 	}
 	degrees = (int) (((double)degrees) * ((double)degrees)/(((double)degrees) - 1.0));
@@ -610,39 +630,31 @@ ISR( PORTB_INT0_vect ){
 /*
  * The following *HIGH* priority ISRs get every sonar reading.
  */
-/*ISR( TCD0_CCA_vect ) {
-	setLCDCursor(LCD, 0);
-	sendIntToLCD(LCD, count++);
-	int distance = adcSmooth(Sonar0, (unsigned int) (TCD0_CCA*2)/58);
-	if (distance == 20)
-		if (TCC0_CCA != 0 || TCC0_CCB != 0){
-			setSpeed(0);
-			setLCDCursor(LCD, 0);
-			sendStringToLCD(LCD, "Son0 stopped");
-		}
+ISR( TCD0_CCA_vect ) {
+	sonarVals.f = adcSmooth(Sonar0, (unsigned int) (TCD0_CCA*2)/58);
 }
 
 ISR( TCD0_CCB_vect ) {
-	setLCDCursor(LCD, 0);
-	sendIntToLCD(LCD, count++);
-	int distance = adcSmooth(Sonar0, (unsigned int) (TCD0_CCA*2)/58);
-	if (distance == 20)
-		if (TCC0_CCA != 0 || TCC0_CCB != 0){
-			setSpeed(0);
-			setLCDCursor(LCD, 0);
-			sendStringToLCD(LCD, "Son1 stopped");
-		}
+	sonarVals.r = adcSmooth(Sonar1, (unsigned int) (TCD0_CCB*2)/58);
 }
 
 ISR( TCD0_CCC_vect ) {
-	setLCDCursor(LCD, 0);
-	sendIntToLCD(LCD, count++);
-	int distance = adcSmooth(Sonar0, (unsigned int) (TCD0_CCA*2)/58);
-	if (distance == 20)
-		if (TCC0_CCA != 0 || TCC0_CCB != 0){
-			setSpeed(0);
-			setLCDCursor(LCD, 0);
-			sendStringToLCD(LCD, "Son2 stopped");
-		}
+	sonarVals.l = adcSmooth(Sonar2, (unsigned int) (TCD0_CCC*2)/58);
 }
-*/
+
+SRCALLBACK(csetHolder) {
+	int pos = atoi(pszFrame);
+	TCC0_CCC = pos;
+}
+
+void setHolder(unsigned int position) {
+	TCC0_CCC = position;
+}
+
+ISR( ADCA_CH0_vect ) {
+	botState.mode = MODE_LAUNCHING;
+	disableTBDetect();
+	ADCA_CH0_INTFLAGS = ADC_CH_CHIF_bm;
+	return;
+
+}

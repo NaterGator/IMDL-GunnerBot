@@ -17,7 +17,10 @@ void idleCamera() {
 		return;
 	}
 	botState.lookingCount++;
-	turnD(30);
+	clearLCD(LCD);
+	sendStringToLCD(LCD, "Looking right");
+	//TODO: Switch back to 30 for demo day
+	turnD(50);
 }
 
 void sensorWatch() {
