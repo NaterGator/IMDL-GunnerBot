@@ -39,7 +39,8 @@ int main(void) {
 	PORTQ_OUTCLR |= PIN0_bm | PIN1_bm;
 
 
-	botState.mode = MODE_SEEKING;
+	setBotMode(MODE_SEEKING);
+	botState.modeNeedInit = true;
 	botState.phoneLooking = false;
 
 
@@ -134,6 +135,10 @@ int main(void) {
 	Sonar2 = &Sonar2Smooth;
 	initPWMread();
 
+
+	enableSonar();
+
+
 	while(1){
 
 		//Act on any queued packets from bluetooth
@@ -164,7 +169,11 @@ int main(void) {
 				 * in TURN_DELAY milliseconds, the robot will rotate 30 degrees and rescan.
 				 *
 				 */
-				if(botState.phoneLooking == false) {
+
+				if( botState.modeNeedInit == true) {
+					//Initialize the lookingCount state var.
+					//When it reaches 24 (nearly 2 turns) it will go into a sleep mode
+					//TODO: Decide what to do after 24 turns.
 
 					if(botState.bluetoothState == false && (PORTB_IN & PIN5_bm) == 0) {
 						//Check if a bluetooth connection is active.
@@ -174,22 +183,24 @@ int main(void) {
 						_delay_ms(3000);
 						break;
 					}
-					//Set the state so we know we've asked the phone for a circle
-					botState.phoneLooking = true;
-					//Ask the phone for circle coordinates
-					writeData(smirfSart.this, "$FSTART$getImg$FEND$ ");
 
-					//Initialize the lookingCount state var.
-					//When it reaches 24 (nearly 2 turns) it will go into a sleep mode
-					//TODO: Decide what to do after 24 turns.
+					stopTCF1();
 					botState.lookingCount = 0;
 					clearLCD(LCD);
-					sendStringToLCD(LCD, "Running look mode");
+					sendStringToLCD(LCD, "mode: seeking");
 
 					//Run TCF0 with the idleCamera function pointer, delaying for TURN_DELAY ms.
 					runTCF0(&idleCamera, TURN_DELAY);
-					break;
+					if(botState.phoneLooking == false) {
+						//Set the state so we know we've asked the phone for a circle
+						botState.phoneLooking = true;
+						//Ask the phone for circle coordinates
+						writeData(smirfSart.this, "$FSTART$getImg$FEND$ ");
+						break;
+					}
+					botState.modeNeedInit = false;
 				}
+
 				/* In this area, we're waiting for the phone to ID a circle.
 				 * When it does so, the serialstream callback will exec and
 				 * move us on to the next state using interrupts
@@ -203,15 +214,12 @@ int main(void) {
 				 * We should have tried to align ourselves with the most recent
 				 * callback execution (we get here from readCircle)
 				 */
+				if(botState.modeNeedInit == true) {
+					//TODO: Run a timeout timer in case we "lose" the ball
+					runTCF1(&lostBall, 15000);
+					botState.modeNeedInit = false;
+				}
 
-
-				// TODO: Test and implement this
-				// 500 is a guess at the low level threshold.
-				/*if(adcSmooth(&ADCAsmoother, ADCA0()) <= 500) {
-					//The ball is in the hopper! Woohoo! Time to shoot it out.
-					botState.mode = MODE_LAUNCHING;
-					break;
-				}*/
 
 				// We'll tell the phone to keep looking for the ball
 				// We may need to line up with it again, or we may have just headed towards it
@@ -223,35 +231,40 @@ int main(void) {
 				}
 
 				// Nothing much to do here. Wait to pick up the ball
-				// TODO: Implement a strategy for failing to pick up the ball in an alotted time.
-				//_delay_s(6);
+
 				//botState.mode = MODE_LAUNCHING;
-				enableTBDetect();
+
 				break;
 			case MODE_LAUNCHING:
+				stopTCF1();
 				clearLCD(LCD);
 				sendStringToLCD(LCD, "mode: launching");
+
+				botState.phoneLooking == false;
+
 				if(botState.launcherOn == false) {
 					// Turn that big beautiful motor on, let it spin up
 					PORTB_OUT |= PIN6_bm;
 					botState.launcherOn = true;
-					_delay_ms(4000);
+					_delay_s(2);
 				}
 
 				setHolder(ARM_RELEASE);
-				_delay_s(5);
+				_delay_s(4);
 				setHolder(ARM_HOLD);
 				// Turn off the motor
 				PORTB_OUTCLR |= PIN7_bm | PIN6_bm;
 				botState.launcherOn = false;
 
-				botState.mode = MODE_WAITING;
+				setBotMode(MODE_WAITING);
 
 				break;
 			case MODE_WAITING:
+				clearLCD(LCD);
+				sendStringToLCD(LCD, "mode: waiting");
 				_delay_s(5);
 				//TODO: revert
-				botState.mode = MODE_SEEKING;
+				setBotMode(MODE_SEEKING);
 			default:
 				break;
 
@@ -298,7 +311,7 @@ void ADCAInit(void)
 {
 	ADCA_REFCTRL = 0x10;			//set to Vref = Vcc/1.6 = 2.0V (approx)
 	ADCA_CH0_CTRL = ADC_CH_INPUTMODE_SINGLEENDED_gc;			//set to single-ended
-	ADCA.CMP = 1200;
+	ADCA.CMP = LIGHT_THRESHOLD;
 	ADCA_CH0_INTCTRL = ADC_CH_INTMODE_BELOW_gc | ADC_CH_INTLVL_OFF_gc;		//set flag at conversion complete.  Disable interrupt
 	ADCA_CH0_MUXCTRL = ADC_CH_MUXPOS_PIN0_gc;
 	cli();
@@ -374,10 +387,18 @@ SRCALLBACK(readCircle) {
 	}
 	//X is left/right
 	//Y is near/far
-	pauseTCF0();
 
 
-	botState.mode = MODE_PICKUP;
+	if(botState.mode == MODE_SEEKING) {
+		stopTCF0();
+		enableTBDetect();
+		setBotMode(MODE_PICKUP);
+	}
+
+	//This counter tracks the last time a ball was detected
+	//If we don't reset this, our "give up" strategy will kick in
+	isrPtrs.TCF1_milliloops = 15000;
+
 	char *pTok = strtok(pszFrame, ",");
 	if(pTok == NULL) return;
 	int x = atoi(pTok);
@@ -453,14 +474,14 @@ void turn(int magnitude, unsigned int duration) {
 	}
 	sendStringToLCD(LCD, " M");
 	sendIntToLCD(LCD, halfMag);
-	runTCF1(&sensorWatch, SONAR_TIMEOUT);
+	//runTCF1(&sensorWatch, SONAR_TIMEOUT);
 	setSpeed(halfMag);
 
 	if(duration != 0) {
 		//Duration hopefully is never zero, or else we're turning endlessly.
 		_delay_ms(duration);
 		setSpeed(0);
-		stopTCF1();
+		//stopTCF1();
 		botState.movement = MOVE_STILL;
 	}
 
@@ -468,13 +489,13 @@ void turn(int magnitude, unsigned int duration) {
 
 void advance(int l, int r, unsigned int duration) {
 	//setSpeed(magnitude);
-	runTCF1(&sensorWatch, SONAR_TIMEOUT);
+	//runTCF1(&sensorWatch, SONAR_TIMEOUT);
 	setSpeedL(l);
 	setSpeedR(r);
 	if(duration != 0){
 		_delay_ms(duration);
 		setSpeed(0);
-		stopTCF1();
+		//stopTCF1();
 		botState.movement = MOVE_STILL;
 	}
 
@@ -491,6 +512,7 @@ void moveTo( int x, int y){
 	clearLCD(LCD);
 	sendStringToLCD(LCD, "di: ");
 	double distance = 8.5595812*pow(1.0048532,((double) abs(480-y)));
+	distance += INTENTIONAL_OVERSHOOT;
 	sendIntToLCD(LCD, (int) distance);
 	double duration = 1000*(distance)/speed; //duration in seconds
 
@@ -507,22 +529,15 @@ void moveTo( int x, int y){
 	setLCDCursor(LCD, LCD->config.lineLength);
 	sendStringToLCD(LCD, "du: ");
 	sendIntToLCD(LCD, (int) duration);
-	runTCF1(&sensorWatch, SONAR_TIMEOUT);
+	//runTCF1(&sensorWatch, SONAR_TIMEOUT);
 
-	advance( pwm+1620, pwm-1620, ((unsigned int) duration));
-	stopTCF1();
+	advance( pwm+MOTOR_BIAS, pwm-MOTOR_BIAS, ((unsigned int) duration));
+	//stopTCF1();
 	botState.movement = MOVE_STILL;
 
 }
 
 void turnD(int degrees) {
-	unsigned int fSon, lSon, rSon;
-	for(int i=0; i < 4; i++) {
-		fSon = adcSmooth(Sonar0, (unsigned int) (SONF*2)/58);
-		lSon = adcSmooth(Sonar2, (unsigned int) (SONL*2)/58);
-		rSon = adcSmooth(Sonar1, (unsigned int) (SONR*2)/58);
-		_delay_ms(150);
-	}
 	degrees = (int) (((double)degrees) * ((double)degrees)/(((double)degrees) - 1.0));
 	const unsigned int pwm = 6000;
 	// angular velocity calculation on hard floor
@@ -542,7 +557,7 @@ void turnD(int degrees) {
 	unsigned oldDL = getDirL();
 	unsigned oldDR = getDirR();
 	if(degrees < 0) {
-		if( rSon <= 24 ) {
+		if( sonarVals.r <= 24 ) {
 			clearLCD(LCD);
 			sendStringToLCD(LCD, "Pre-evading-L");
 			//Execute an evasive right turn
@@ -551,7 +566,7 @@ void turnD(int degrees) {
 		}
 		botState.movement = MOVE_TURNLEFT;
 	} else {
-		if( lSon <= 24 ) {
+		if( sonarVals.l <= 24 ) {
 			clearLCD(LCD);
 			sendStringToLCD(LCD, "Pre-evading-R");
 			//Exceuting an evasive left turn
@@ -562,12 +577,12 @@ void turnD(int degrees) {
 	}
 	setDirL(degrees < 0?-1:1);
 	setDirR(degrees < 0?1:-1);
-	runTCF1(&sensorWatch, SONAR_TIMEOUT);
+	//runTCF1(&sensorWatch, SONAR_TIMEOUT);
 	setSpeed(pwm);
 
 	_delay_ms(duration);
 	setSpeed(0);
-	stopTCF1();
+	//stopTCF1();
 	botState.movement = MOVE_STILL;
 	setDirL(oldDL);
 	setDirR(oldDR);
@@ -632,14 +647,17 @@ ISR( PORTB_INT0_vect ){
  */
 ISR( TCD0_CCA_vect ) {
 	sonarVals.f = adcSmooth(Sonar0, (unsigned int) (TCD0_CCA*2)/58);
+	evade();
 }
 
 ISR( TCD0_CCB_vect ) {
 	sonarVals.r = adcSmooth(Sonar1, (unsigned int) (TCD0_CCB*2)/58);
+	evade();
 }
 
 ISR( TCD0_CCC_vect ) {
 	sonarVals.l = adcSmooth(Sonar2, (unsigned int) (TCD0_CCC*2)/58);
+	evade();
 }
 
 SRCALLBACK(csetHolder) {
@@ -652,9 +670,50 @@ void setHolder(unsigned int position) {
 }
 
 ISR( ADCA_CH0_vect ) {
-	botState.mode = MODE_LAUNCHING;
+	setBotMode(MODE_LAUNCHING);
 	disableTBDetect();
 	ADCA_CH0_INTFLAGS = ADC_CH_CHIF_bm;
 	return;
 
+}
+
+void evade() {
+
+	switch(botState.movement) {
+		case MOVE_TURNLEFT:
+			if(sonarVals.r <= 24) {
+				//abort the movement. reverse safely
+				evasiveTurn(1);
+				clearLCD(LCD);
+				sendStringToLCD(LCD, "Obstacle right");
+
+				_delay_s(3);
+			}
+			break;
+		case MOVE_TURNRIGHT:
+			if(sonarVals.l <= 24) {
+				//abort the movement. reverse safely
+				evasiveTurn(-1);
+				clearLCD(LCD);
+				sendStringToLCD(LCD, "Obstacle left");
+				_delay_s(3);
+			}
+			break;
+		case MOVE_FORWARD:
+			if(sonarVals.f <= 20) {
+				//abort the movement.
+				setSpeed(0);
+				clearLCD(LCD);
+				sendStringToLCD(LCD, "Obstacle blocking fwd");
+				_delay_s(3);
+			}
+			break;
+		default:
+			break;
+	}
+}
+
+void setBotMode( unsigned int mode ) {
+	botState.mode = mode;
+	botState.modeNeedInit = true;
 }

@@ -11,7 +11,7 @@
 #include "FetchGunner.h"
 
 void idleCamera();
-void sensorWatch();
+void lostBall();
 void initTCF0(void);
 void runTCF0( void *funcPtr, unsigned int countMs );
 void stopTCF0( void );

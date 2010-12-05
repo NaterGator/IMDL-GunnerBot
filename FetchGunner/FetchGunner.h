@@ -43,6 +43,9 @@
 #define EVASIVE_TURN_DURATION 700
 #define EVASIVE_REV_DURATION 300
 
+#define MOTOR_BIAS 0 //Positive values trend right (correct for left fwd bias)
+#define LIGHT_THRESHOLD 800 //between 3k and 0, formerly 1200
+#define INTENTIONAL_OVERSHOOT 3
 
 struct adcSmooth_struct {
 	unsigned int *prevVals;
@@ -80,6 +83,7 @@ struct FGoperator {
 	bool bluetoothState;
 	bool launcherOn;
 	unsigned movement;
+	bool modeNeedInit;
 } botState;
 
 
@@ -125,6 +129,8 @@ SRCALLBACK(move);
 
 void turnD(int degrees);
 void evasiveTurn( int dir );
+void evade();
+void setBotMode( unsigned int mode );
 
 SRCALLBACK(cturnD);
 SRCALLBACK(csetHolder);

@@ -23,57 +23,13 @@ void idleCamera() {
 	turnD(50);
 }
 
-void sensorWatch() {
-	/* do something useful with sonar sensor data
-	 *
-	 * should run during turn(), advance()
-	 */
-	int fSon = adcSmooth(Sonar0, (unsigned int) (SONF*2)/58);
-	int lSon = adcSmooth(Sonar1, (unsigned int) (SONL*2)/58);
-	int rSon = adcSmooth(Sonar2, (unsigned int) (SONR*2)/58);
-	switch(botState.movement) {
-		case MOVE_TURNLEFT:
-			if(rSon <= 24) {
-				//abort the movement. reverse safely
-				evasiveTurn(1);
-				clearLCD(LCD);
-				sendStringToLCD(LCD, "Obstacle right");
+void lostBall() {
+	//Unfortunately we lost track of where the ball was.
+	//We could try to relocate it, we're going back to seek mode.
 
-				_delay_s(3);
-			}
-			break;
-		case MOVE_TURNRIGHT:
-			if(lSon <= 24) {
-				//abort the movement. reverse safely
-				evasiveTurn(-1);
-				clearLCD(LCD);
-				sendStringToLCD(LCD, "Obstacle left");
-				_delay_s(3);
-			}
-			break;
-		case MOVE_FORWARD:
-			if(fSon <= 20) {
-				//abort the movement.
-				setSpeed(0);
-				clearLCD(LCD);
-				sendStringToLCD(LCD, "Obstacle blocking fwd");
-				_delay_s(3);
-			}
-			break;
-		default:
-			break;
-	}
-	/*setLCDCursor(LCD, 0);
-	sendStringToLCD(LCD, "F,L,R:");
-	sendIntToLCD(LCD, fSon);
-	sendCharToLCD(LCD, ',');
-	sendIntToLCD(LCD, lSon);
-	sendCharToLCD(LCD, ',');
-	sendIntToLCD(LCD, rSon);
-	sendCharToLCD(LCD, ':');
-	sendIntToLCD(LCD, count++);
-	sendStringToLCD(LCD, "     ");*/
-
+	disableTBDetect();
+	botState.phoneLooking = false;
+	setBotMode(MODE_SEEKING);
 }
 
 void initTCF0() {
@@ -93,10 +49,12 @@ void runTCF0( void *funcPtr, unsigned int countMs ) {
 }
 
 void stopTCF0( void ) {
+	TCF0_INTCTRLB = TC_CCAINTLVL_OFF_gc;
+	TCF0_CTRLA = TC_CLKSEL_OFF_gc;
+
 	isrPtrs.TCF0_milliloops = 0;
 	isrPtrs.TCF0_millis = 0;
 	isrPtrs.TCF0_CCA_PTR = &nothing;
-	TCF0_CTRLA = TC_CLKSEL_OFF_gc;
 }
 
 
@@ -117,10 +75,13 @@ void runTCF1( void *funcPtr, unsigned int countMs ) {
 }
 
 void stopTCF1( void ) {
+	TCF1_INTCTRLB = TC_CCAINTLVL_OFF_gc;
+	TCF1_CTRLA = TC_CLKSEL_OFF_gc;
+
 	isrPtrs.TCF1_milliloops = 0;
 	isrPtrs.TCF1_millis = 0;
 	isrPtrs.TCF1_CCA_PTR = &nothing;
-	TCF1_CTRLA = TC_CLKSEL_OFF_gc;
+
 }
 
 
