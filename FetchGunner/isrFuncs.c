@@ -10,10 +10,13 @@
 void idleCamera() {
 	if(botState.lookingCount == 24 || botState.bluetoothState == false ) {
 		//Tried too many times.
+		clearLCD(LCD);
 		sendStringToLCD(LCD, "Could not locate ball");
+		_delay_ms(500);
 		botState.lookingCount = 0;
 		TCF0_INTCTRLB = (TCF0_INTCTRLB & ~TC0_CCAINTLVL_gm) | TC_CCAINTLVL_OFF_gc;
 		botState.mode = MODE_WAITING;
+
 		return;
 	}
 	botState.lookingCount++;
@@ -26,7 +29,9 @@ void idleCamera() {
 void lostBall() {
 	//Unfortunately we lost track of where the ball was.
 	//We could try to relocate it, we're going back to seek mode.
-
+	clearLCD(LCD);
+	sendStringToLCD(LCD, "Lost the ball!");
+	if(DEBUG_DELAY) _delay_s(1);
 	disableTBDetect();
 	botState.phoneLooking = false;
 	setBotMode(MODE_SEEKING);
@@ -39,6 +44,7 @@ void initTCF0() {
 }
 
 void runTCF0( void *funcPtr, unsigned int countMs ) {
+	TCF0_INTFLAGS = TC0_CCAIF_bm;
 	isrPtrs.TCF0_milliloops = countMs;
 	isrPtrs.TCF0_millis = countMs;
 	isrPtrs.TCF0_CCA_PTR = funcPtr;
@@ -61,7 +67,7 @@ void stopTCF0( void ) {
 void initTCF1() {
 	TCF1_CTRLA = TC_CLKSEL_DIV1_gc;
 	TCF1_CTRLB = TC1_CCAEN_bm | TC1_WGMODE0_bm;
-	TCF0_INTCTRLB = TC_CCAINTLVL_OFF_gc;
+	TCF1_INTCTRLB = TC_CCAINTLVL_OFF_gc;
 	TCF1_CCA = 32000;
 }
 
@@ -71,6 +77,7 @@ void runTCF1( void *funcPtr, unsigned int countMs ) {
 	isrPtrs.TCF1_CCA_PTR = funcPtr;
 	TCF1_CTRLA = TC_CLKSEL_DIV1_gc;
 	TCF1_CNT = 0;
+	TCF1_CCA = 32000;
 	TCF1_INTCTRLB = TC_CCAINTLVL_LO_gc;
 }
 

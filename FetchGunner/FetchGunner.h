@@ -43,6 +43,8 @@
 #define EVASIVE_TURN_DURATION 700
 #define EVASIVE_REV_DURATION 300
 
+#define DEBUG_DELAY true
+
 #define MOTOR_BIAS 0 //Positive values trend right (correct for left fwd bias)
 #define LIGHT_THRESHOLD 800 //between 3k and 0, formerly 1200
 #define INTENTIONAL_OVERSHOOT 3
@@ -92,8 +94,8 @@ struct FGoperator {
 #define max(X,Y) (((X) > (Y)) ?  (X) : (Y))
 #define enableSonar() 	TCD0_INTCTRLB |= TC_CCAINTLVL_LO_gc | TC_CCBINTLVL_LO_gc | TC_CCCINTLVL_LO_gc
 #define disableSonar()	TCD0_INTCTRLB &= TC_CCAINTLVL_OFF_gc | TC_CCBINTLVL_OFF_gc | TC_CCCINTLVL_OFF_gc;
-#define enableTBDetect() ADCA_CH0_INTCTRL |= ADC_CH_INTLVL_LO_gc;
-#define disableTBDetect() ADCA_CH0_INTCTRL &= ~ADC_CH_INTLVL_LO_gc;
+#define enableTBDetect() ADCA_CTRLA |= ADC_FLUSH_bm | ADC_ENABLE_bm; //ADCA_CH0_INTCTRL |= ADC_CH_INTLVL_LO_gc;
+#define disableTBDetect() ADCA_CTRLA = 0x0;
 
 #define ARM_HOLD 1020
 #define ARM_RELEASE 700

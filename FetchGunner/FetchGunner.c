@@ -40,7 +40,6 @@ int main(void) {
 
 
 	setBotMode(MODE_SEEKING);
-	botState.modeNeedInit = true;
 	botState.phoneLooking = false;
 
 
@@ -138,6 +137,8 @@ int main(void) {
 
 	enableSonar();
 
+	botState.bluetoothState = PORTB_IN & PIN5_bm;
+
 
 	while(1){
 
@@ -216,6 +217,7 @@ int main(void) {
 				 */
 				if(botState.modeNeedInit == true) {
 					//TODO: Run a timeout timer in case we "lose" the ball
+					botState.lookingCount = 0;
 					runTCF1(&lostBall, 15000);
 					botState.modeNeedInit = false;
 				}
@@ -265,7 +267,10 @@ int main(void) {
 				_delay_s(5);
 				//TODO: revert
 				setBotMode(MODE_SEEKING);
+				break;
 			default:
+				clearLCD(LCD);
+				sendStringToLCD(LCD, "In Unknown state");
 				break;
 
 		}
@@ -312,11 +317,11 @@ void ADCAInit(void)
 	ADCA_REFCTRL = 0x10;			//set to Vref = Vcc/1.6 = 2.0V (approx)
 	ADCA_CH0_CTRL = ADC_CH_INPUTMODE_SINGLEENDED_gc;			//set to single-ended
 	ADCA.CMP = LIGHT_THRESHOLD;
-	ADCA_CH0_INTCTRL = ADC_CH_INTMODE_BELOW_gc | ADC_CH_INTLVL_OFF_gc;		//set flag at conversion complete.  Disable interrupt
+	ADCA_CH0_INTCTRL = ADC_CH_INTMODE_BELOW_gc | ADC_CH_INTLVL_LO_gc;		//set flag at conversion complete.  Disable interrupt
 	ADCA_CH0_MUXCTRL = ADC_CH_MUXPOS_PIN0_gc;
 	cli();
 	ADCA_CTRLB |= ADC_FREERUN_bm;				//12bit, right adjusted
-	ADCA_CTRLA |= 0x01;				//Enable ADCA
+	//ADCA_CTRLA |= 0x01;				//Enable ADCA
 	_delay_ms(1);
 	ADCA_CH0_INTFLAGS |= ADC_CH_CHIF_bm;
 	sei();
@@ -380,9 +385,14 @@ SRCALLBACK(timeMotor) {
 }
 
 SRCALLBACK(readCircle) {
+	clearLCD(LCD);
 
-	if( botState.mode == MODE_LAUNCHING ) {
+	if( botState.mode != MODE_SEEKING && botState.mode != MODE_PICKUP) {
 		botState.phoneLooking = false;
+		clearLCD(LCD);
+		sendStringToLCD(LCD, "Ignoring Ball:");
+		sendIntToLCD(LCD, botState.mode);
+		_delay_s(1);
 		return;
 	}
 	//X is left/right
@@ -390,6 +400,8 @@ SRCALLBACK(readCircle) {
 
 
 	if(botState.mode == MODE_SEEKING) {
+		clearLCD(LCD);
+		sendStringToLCD(LCD, "seek mode sw");
 		stopTCF0();
 		enableTBDetect();
 		setBotMode(MODE_PICKUP);
@@ -397,7 +409,7 @@ SRCALLBACK(readCircle) {
 
 	//This counter tracks the last time a ball was detected
 	//If we don't reset this, our "give up" strategy will kick in
-	isrPtrs.TCF1_milliloops = 15000;
+	isrPtrs.TCF1_milliloops = isrPtrs.TCF1_millis;
 
 	char *pTok = strtok(pszFrame, ",");
 	if(pTok == NULL) return;
@@ -545,13 +557,13 @@ void turnD(int degrees) {
 	double aVel = 35.710404*log((double) pwm) - 198.689120;
 	unsigned int duration = 1100*((double) abs(degrees))/aVel;
 	//at the high end of pwm speed angle is off with longer spins (about 20 degs at 360 rotation)
-	sendStringToLCD(LCD, "Dur: ");
+/*	sendStringToLCD(LCD, "Dur: ");
 	sendIntToLCD(LCD, duration);
 	sendStringToLCD(LCD, "AV: ");
 	sendIntToLCD(LCD, (int) aVel);
 	//setLCDCursor(LCD, LCD->config.lineLength);
 	sendStringToLCD(LCD, "Deg: ");
-	sendIntToLCD(LCD, degrees);
+	sendIntToLCD(LCD, degrees);*/
 	//fudgefactor is inversely proportional to set speed.
 	//unsigned int fudgeFactor = (9000-pwm)/9000;
 	unsigned oldDL = getDirL();
@@ -686,8 +698,6 @@ void evade() {
 				evasiveTurn(1);
 				clearLCD(LCD);
 				sendStringToLCD(LCD, "Obstacle right");
-
-				_delay_s(3);
 			}
 			break;
 		case MOVE_TURNRIGHT:
@@ -696,7 +706,6 @@ void evade() {
 				evasiveTurn(-1);
 				clearLCD(LCD);
 				sendStringToLCD(LCD, "Obstacle left");
-				_delay_s(3);
 			}
 			break;
 		case MOVE_FORWARD:
@@ -705,7 +714,6 @@ void evade() {
 				setSpeed(0);
 				clearLCD(LCD);
 				sendStringToLCD(LCD, "Obstacle blocking fwd");
-				_delay_s(3);
 			}
 			break;
 		default:
