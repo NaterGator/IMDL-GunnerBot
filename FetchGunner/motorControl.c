@@ -143,9 +143,9 @@ void evasiveTurn( int dir ) {
 	_delay_ms(EVASIVE_TURN_DURATION);
 	setSpeed(0);
 	_delay_ms(150);
-	setDir(1);
+	setDir(-1);
 	setSpeed(EVASIVE_SPEED);
-	_delay_ms(700);
+	_delay_ms(EVASIVE_REV_DURATION);
 	setSpeed(0);
 	setDirL(dirL);
 	setDirR(dirR);

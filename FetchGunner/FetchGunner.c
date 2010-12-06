@@ -7,7 +7,7 @@
  *      Behavior modes:
  *      1) Wait for Gunner to approach
  *      2) Instruct Gunner to drop tennis ball, navigate to and pick up tennis ball
- *      3) Launch tennis ball, return to mode 1
+ *      3) Launch tennis ball, wait to return to mode 1
  *
  */
 
@@ -139,7 +139,6 @@ int main(void) {
 
 	botState.bluetoothState = PORTB_IN & PIN5_bm;
 
-
 	while(1){
 
 		//Act on any queued packets from bluetooth
@@ -196,7 +195,7 @@ int main(void) {
 						//Set the state so we know we've asked the phone for a circle
 						botState.phoneLooking = true;
 						//Ask the phone for circle coordinates
-						writeData(smirfSart.this, "$FSTART$getImg$FEND$ ");
+						writeData(smirfSart.this, "$FSTART$getImg$FEND$   ");
 						break;
 					}
 					botState.modeNeedInit = false;
@@ -222,6 +221,16 @@ int main(void) {
 					botState.modeNeedInit = false;
 				}
 
+				if(botState.bluetoothState == false && (PORTB_IN & PIN5_bm) == 0) {
+					//Check if a bluetooth connection is active.
+					//Wait and continue the loop.
+					clearLCD(LCD);
+					sendStringToLCD(LCD, "bluetooth disconnected");
+					stopTCF1();
+					setBotMode(MODE_SEEKING);
+					_delay_ms(300);
+					break;
+				}
 
 				// We'll tell the phone to keep looking for the ball
 				// We may need to line up with it again, or we may have just headed towards it
@@ -229,7 +238,7 @@ int main(void) {
 				// and incoming circle position and it didn't get into the hopper
 				if(botState.phoneLooking == false) {
 					botState.phoneLooking = true;
-					writeData(smirfSart.this, "$FSTART$getImg$FEND$ ");
+					writeData(smirfSart.this, "$FSTART$getImg$FEND$    ");
 				}
 
 				// Nothing much to do here. Wait to pick up the ball
@@ -265,6 +274,8 @@ int main(void) {
 				clearLCD(LCD);
 				sendStringToLCD(LCD, "mode: waiting");
 				_delay_s(5);
+				writeData(smirfSart.this, "$FSTART$letGo$FEND$     ");
+				_delay_s(2);
 				//TODO: revert
 				setBotMode(MODE_SEEKING);
 				break;
@@ -441,7 +452,7 @@ SRCALLBACK(readCircle) {
 
 	setDir(1);
 	//advance(8000, 8000, 500-y);
-	brush(1);
+	if(y > 230) brush(1);
 	moveTo(0, y);
 	_delay_ms(2500);
 	brush(0);
@@ -516,7 +527,8 @@ void advance(int l, int r, unsigned int duration) {
 
 
 void moveTo( int x, int y){
-	const unsigned int pwm = 5000;
+	//TODO: for demo was set to 5000
+	const unsigned int pwm = MOTOR_SPEED;
 	// lead biasing
 	// inches per second = 6.5352431 ln( pwm speed ) - 40.6344299
 	botState.movement = MOVE_FORWARD;
@@ -525,6 +537,7 @@ void moveTo( int x, int y){
 	sendStringToLCD(LCD, "di: ");
 	double distance = 8.5595812*pow(1.0048532,((double) abs(480-y)));
 	distance += INTENTIONAL_OVERSHOOT;
+	if(y <= 230 && x == 0) distance /= 2.2;
 	sendIntToLCD(LCD, (int) distance);
 	double duration = 1000*(distance)/speed; //duration in seconds
 
@@ -551,7 +564,9 @@ void moveTo( int x, int y){
 
 void turnD(int degrees) {
 	degrees = (int) (((double)degrees) * ((double)degrees)/(((double)degrees) - 1.0));
-	const unsigned int pwm = 6000;
+	if(abs(degrees) < 5) degrees *= (1+abs((8-abs(degrees))/3));
+	//TODO: For Demo was set to 6000
+	const unsigned int pwm = MOTOR_SPEED;
 	// angular velocity calculation on hard floor
 	// degrees per second = 35.710404 ln(x) - 192.689120
 	double aVel = 35.710404*log((double) pwm) - 198.689120;
@@ -642,6 +657,7 @@ ISR( USARTE1_DRE_vect ) {
 //	sendStringToLCD(LCD, "Inside DRE.");
 	PORTQ.OUT = 1 & (PORTQ.OUT ^ 1);
 	sendPendingChar(USARTE);
+	_delay_us(10);
 }
 
 ISR( PORTB_INT0_vect ){

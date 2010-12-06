@@ -37,17 +37,19 @@
 #define SONR TCD0_CCB
 #define SONL TCD0_CCC
 
-#define TURN_DELAY 5000
+#define TURN_DELAY 7000
 #define SONAR_TIMEOUT 50
 #define EVASIVE_SPEED 3000
-#define EVASIVE_TURN_DURATION 700
-#define EVASIVE_REV_DURATION 300
+#define EVASIVE_TURN_DURATION 500
+#define EVASIVE_REV_DURATION 2200
+#define EVASIVE_FWD_DURATION 2000
 
-#define DEBUG_DELAY true
+#define DEBUG_DELAY false
 
-#define MOTOR_BIAS 0 //Positive values trend right (correct for left fwd bias)
+#define MOTOR_BIAS 900 //Positive values trend right (correct for left fwd bias)
 #define LIGHT_THRESHOLD 800 //between 3k and 0, formerly 1200
 #define INTENTIONAL_OVERSHOOT 3
+#define MOTOR_SPEED 5000
 
 struct adcSmooth_struct {
 	unsigned int *prevVals;

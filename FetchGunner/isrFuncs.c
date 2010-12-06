@@ -21,20 +21,39 @@ void idleCamera() {
 	}
 	botState.lookingCount++;
 	clearLCD(LCD);
-	sendStringToLCD(LCD, "Looking right");
-	//TODO: Switch back to 30 for demo day
-	turnD(50);
+	if(botState.lookingCount < 13) {
+		sendStringToLCD(LCD, "Looking right");
+		turnD(30);
+	} else {
+		sendStringToLCD(LCD, "Looking left");
+		turnD(-30);
+	}
 }
 
 void lostBall() {
 	//Unfortunately we lost track of where the ball was.
 	//We could try to relocate it, we're going back to seek mode.
+	setSpeed(0);
 	clearLCD(LCD);
 	sendStringToLCD(LCD, "Lost the ball!");
-	if(DEBUG_DELAY) _delay_s(1);
-	disableTBDetect();
+	_delay_ms(10);
+	unsigned dirL = getDirL();
+	unsigned dirR = getDirR();
+	setDirL(-1);
+	setDirR(-1);
+	setSpeed(EVASIVE_SPEED);
+	_delay_ms(EVASIVE_REV_DURATION);
+	setSpeed(0);
+	_delay_ms(250);
+	setDir(1);
+	setSpeed(0);
+	setDirL(dirL);
+	setDirR(dirR);
+	//disableTBDetect();
+
+
 	botState.phoneLooking = false;
-	setBotMode(MODE_SEEKING);
+	setBotMode(MODE_PICKUP);
 }
 
 void initTCF0() {
